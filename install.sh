@@ -34,9 +34,10 @@ echo "✓ Command 'hutch' installed at $BIN_DIR/hutch"
 mkdir -p "$PROFILES_DIR"
 echo "✓ Profiles directory: $PROFILES_DIR"
 
-# Copy example profiles if they don't exist yet
-for example in "$SCRIPT_DIR/profiles/"*.example; do
-  name="$(basename "$example" .example)"
+# Copy default profiles if they don't exist yet
+for example in "$SCRIPT_DIR/profiles/"*; do
+  [ -f "$example" ] || continue
+  name="$(basename "$example")"
   dest="$PROFILES_DIR/$name"
   if [ ! -f "$dest" ]; then
     cp "$example" "$dest"
