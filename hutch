@@ -26,6 +26,7 @@ usage:
   hutch build <base>                 build the image for a base
   hutch rebuild <base>               force rebuild the image (no cache)
 
+  hutch new profile <name>           create a new profile and open it in the editor
   hutch new base <name>              create a new base and open it in the editor
   hutch new image <name>             create a new Dockerfile and open it in the editor
 
@@ -214,6 +215,25 @@ _list_bases() {
   done
 }
 
+_new_profile() {
+  local name="${1:?usage: hutch new profile <name>}"
+  local dest="$PROFILES_DIR/$name"
+  mkdir -p "$PROFILES_DIR"
+  if [ -f "$dest" ]; then
+    echo "Profile '$name' already exists: $dest"
+    _open_editor "$dest"
+    return
+  fi
+  cat > "$dest" <<EOF
+BUILD=""
+BASE="default"
+COMMAND=""
+DESCRIPTION=""
+EOF
+  echo "Profile created: $dest"
+  _open_editor "$dest"
+}
+
 _new_base() {
   local name="${1:?usage: hutch new base <name>}"
   local dest="$BASES_DIR/$name.yml"
@@ -399,9 +419,10 @@ case "$cmd" in
 
   new)
     case "${2:-}" in
-      base)  _new_base "${3:-}" ;;
-      image) _new_image "${3:-}" ;;
-      *) echo "usage: hutch new base|image <name>" >&2; exit 1 ;;
+      profile) _new_profile "${3:-}" ;;
+      base)    _new_base "${3:-}" ;;
+      image)   _new_image "${3:-}" ;;
+      *) echo "usage: hutch new profile|base|image <name>" >&2; exit 1 ;;
     esac
     ;;
 
