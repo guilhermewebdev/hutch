@@ -22,10 +22,21 @@ The workspace is always the **current directory** — run `hutch work` from any 
 
 ## Installation
 
+**One-liner** (clones the repo automatically):
+
 ```bash
-git clone <repo> hutch
-cd hutch
-./install.sh
+curl -fsSL https://raw.githubusercontent.com/guilhermewebdev/hutch/main/install.sh | bash
+```
+
+```bash
+wget -qO- https://raw.githubusercontent.com/guilhermewebdev/hutch/main/install.sh | bash
+```
+
+**Or clone manually:**
+
+```bash
+git clone https://github.com/guilhermewebdev/hutch.git
+cd hutch && ./install.sh
 ```
 
 Ensure `~/.local/bin` is in your `PATH`:
@@ -34,6 +45,8 @@ Ensure `~/.local/bin` is in your `PATH`:
 echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
 source ~/.bashrc
 ```
+
+To update hutch later, just re-run the one-liner — it pulls the latest changes and updates the symlink.
 
 ## Usage
 

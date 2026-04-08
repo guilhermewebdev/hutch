@@ -1,11 +1,28 @@
 #!/usr/bin/env bash
 # Installs the `hutch` command globally and sets up the profiles directory.
-# Usage: ./install.sh
+#
+# Local:  ./install.sh
+# Remote: curl -fsSL https://raw.githubusercontent.com/guilhermewebdev/hutch/main/install.sh | bash
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO="https://github.com/guilhermewebdev/hutch.git"
+DEFAULT_INSTALL_DIR="$HOME/.local/share/hutch"
 BIN_DIR="$HOME/.local/bin"
 PROFILES_DIR="$HOME/.config/hutch"
+
+# Detect remote execution (piped via curl/wget — no local files present)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-install.sh}")" && pwd 2>/dev/null || echo "")"
+if [ ! -f "$SCRIPT_DIR/hutch" ]; then
+  echo "Remote install detected. Cloning hutch to $DEFAULT_INSTALL_DIR..."
+  if [ -d "$DEFAULT_INSTALL_DIR/.git" ]; then
+    git -C "$DEFAULT_INSTALL_DIR" pull --ff-only
+    echo "✓ Updated existing installation"
+  else
+    git clone "$REPO" "$DEFAULT_INSTALL_DIR"
+    echo "✓ Cloned to $DEFAULT_INSTALL_DIR"
+  fi
+  SCRIPT_DIR="$DEFAULT_INSTALL_DIR"
+fi
 
 # Install `hutch` command
 mkdir -p "$BIN_DIR"
