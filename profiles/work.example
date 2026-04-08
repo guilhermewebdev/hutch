@@ -1,3 +1,3 @@
-BASE="claude"
+BUILD="claude"
 COMMAND="claude"
 DESCRIPTION="Claude – work account"

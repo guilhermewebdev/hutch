@@ -1,8 +1,8 @@
 services:
   main:
     build:
-      context: "${BOX_IMAGES_DIR}/gemini"
-    image: "ai-box-gemini:latest"
+      context: "${BOX_IMAGES_DIR}/${BOX_BUILD}"
+    image: "${BOX_IMAGE}"
     stdin_open: true
     tty: true
     user: "${BOX_UID}:${BOX_GID}"

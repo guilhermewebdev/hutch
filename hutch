@@ -130,9 +130,11 @@ _load_profile() {
     _list_profiles >&2
     exit 1
   fi
-  BASE="" COMMAND="" DESCRIPTION=""
+  BUILD="" BASE="" COMMAND="" DESCRIPTION=""
   # shellcheck source=/dev/null
   source "$config"
+  # BASE defaults to "default" when not explicitly set
+  BASE="${BASE:-default}"
 }
 
 _list_profiles() {
@@ -143,17 +145,19 @@ _list_profiles() {
     [ -f "$config" ] || continue
     local name
     name="$(basename "$config")"
-    BASE="" COMMAND="" DESCRIPTION=""
+    BUILD="" BASE="" COMMAND="" DESCRIPTION=""
     # shellcheck source=/dev/null
     source "$config"
-    local vol_status
+    BASE="${BASE:-default}"
+    local base_display vol_status
+    base_display="$BASE${BUILD:+ (build: $BUILD)}"
     vol_status="$(docker volume inspect "${name}_home" &>/dev/null && echo "volume: exists" || echo "volume: new")"
     printf "  %-15s  %s\n" "$name" "$DESCRIPTION"
-    printf "  %-15s  base: %-12s | cmd: %-10s | %s\n" "" "$BASE" "$COMMAND" "$vol_status"
+    printf "  %-15s  base: %-20s | cmd: %-10s | %s\n" "" "$base_display" "$COMMAND" "$vol_status"
     echo ""
     found=1
   done
-  [ "$found" -eq 0 ] && echo "  (no profiles)"
+  if [ "$found" -eq 0 ]; then echo "  (no profiles)"; fi
 }
 
 # --- Edit ---
@@ -199,12 +203,10 @@ _list_bases() {
   fi
   for f in "$BASES_DIR"/*.yml; do
     [ -f "$f" ] || continue
-    local name image img_status
+    local name
     name="$(basename "$f" .yml)"
-    image="ai-box-$name:latest"
-    img_status="$(docker image inspect "$image" &>/dev/null && echo "image ok" || echo "image missing")"
-    printf "  %-15s  %s\n" "$name" "$f"
-    printf "  %-15s  image: %-30s [%s]\n" "" "$image" "$img_status"
+    printf "  %s\n" "$name"
+    printf "    %s\n" "$f"
     echo ""
   done
 }
@@ -221,8 +223,8 @@ _new_base() {
 services:
   main:
     build:
-      context: "\${BOX_IMAGES_DIR}/$name"
-    image: "ai-box-$name:latest"
+      context: "\${BOX_IMAGES_DIR}/\${BOX_BUILD}"
+    image: "\${BOX_IMAGE}"
     stdin_open: true
     tty: true
     user: "\${BOX_UID}:\${BOX_GID}"
@@ -306,6 +308,8 @@ _build_base() {
 _export_env() {
   local profile="$1"
   export BOX_PROFILE="$profile"
+  export BOX_BUILD="${BUILD:-}"
+  export BOX_IMAGE="ai-box-${BUILD:-unknown}:latest"
   export BOX_WORKSPACE="$PWD"
   export BOX_IMAGES_DIR="$IMAGES_DIR"
   export BOX_UID="$(id -u)"
