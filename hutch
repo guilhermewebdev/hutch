@@ -36,6 +36,9 @@ usage:
 
   hutch remove <profile>             delete the profile volume (keeps the profile file)
 
+  hutch update                       update hutch to the latest version (preserves user files)
+  hutch update --force               update and overwrite local modifications to hutch files
+
 Examples:
   hutch work                         run claude in the current directory using the work profile
   hutch work login                   authenticate in the work profile
@@ -324,6 +327,63 @@ _run() {
   exec docker compose -f "$base_file" run --rm main "$@"
 }
 
+# --- Update ---
+
+_update() {
+  local force="${1:-}"
+  cd "$SCRIPT_DIR"
+
+  if ! git rev-parse --git-dir &>/dev/null; then
+    echo "hutch was not installed via git — cannot update automatically." >&2
+    echo "Re-run the install script to get the latest version:" >&2
+    echo "  curl -fsSL https://raw.githubusercontent.com/guilhermewebdev/hutch/main/install.sh | bash" >&2
+    exit 1
+  fi
+
+  echo "Fetching updates..."
+  git fetch origin main --quiet
+
+  local current remote
+  current="$(git rev-parse HEAD)"
+  remote="$(git rev-parse origin/main)"
+
+  if [ "$current" = "$remote" ]; then
+    echo "Already up to date."
+    return
+  fi
+
+  echo ""
+  echo "Changes to be applied:"
+  git log --oneline HEAD..origin/main
+  echo ""
+
+  # Check for local modifications to tracked files
+  local modified
+  modified="$(git status --porcelain | grep -v '^??' || true)"
+
+  if [ -n "$modified" ]; then
+    echo "Local modifications to hutch files detected:"
+    echo "$modified" | sed 's/^/  /'
+    echo ""
+    if [ "$force" = "--force" ]; then
+      echo "Stashing local modifications (--force)..."
+      git stash push --quiet -m "hutch update $(date +%Y-%m-%d)"
+    else
+      echo "These files may conflict with the update."
+      echo "Options:"
+      echo "  hutch update --force   stash your changes and update"
+      echo "  git -C $SCRIPT_DIR pull   update manually"
+      exit 1
+    fi
+  fi
+
+  git pull --ff-only origin main
+
+  # Re-run install to update symlink and add new default profiles
+  # (existing user profiles in ~/.config/hutch/ are never overwritten)
+  "$SCRIPT_DIR/install.sh"
+}
+
 # --- Entrypoint ---
 
 cmd="${1:-}"
@@ -375,6 +435,10 @@ case "$cmd" in
     profile="${2:?usage: hutch shell <profile>}"
     _load_profile "$profile"
     _run "$profile" "$(_base_file "$BASE")" bash
+    ;;
+
+  update)
+    _update "${2:-}"
     ;;
 
   remove)
