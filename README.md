@@ -51,19 +51,24 @@ To update hutch later, just re-run the one-liner — it pulls the latest changes
 ## Usage
 
 ```bash
-hutch <profile> [args...]    # run the profile's default command in the current directory
-hutch shell <profile>        # open an interactive shell in the profile
-hutch list                   # list profiles and volume status
-hutch list bases             # list bases and image status
-hutch list images            # list built Docker images
+hutch <profile> [args...]              # run the profile's default command in the current directory
+hutch shell <profile>                  # open an interactive shell in the profile
+hutch list                             # list profiles and volume status
+hutch list bases                       # list bases and image status
+hutch list images                      # list built Docker images
 
-hutch build <base>           # build the image for a base
-hutch rebuild <base>         # force rebuild (no cache)
+hutch build <base>                     # build the image for a base
+hutch rebuild <base>                   # force rebuild (no cache)
 
-hutch new base <name>        # create a new base and open in editor
-hutch new image <name>       # create a new Dockerfile and open in editor
+hutch new base <name>                  # create a new base and open in editor
+hutch new image <name>                 # create a new Dockerfile and open in editor
 
-hutch remove <profile>       # delete the profile's volume (keeps the profile file)
+hutch edit image|base|profile <name>   # open an existing file in the editor
+
+hutch config                           # show configuration
+hutch config editor [value]            # get or set the preferred editor
+
+hutch remove <profile>                 # delete the profile's volume (keeps the profile file)
 ```
 
 ## Quickstart
@@ -84,6 +89,27 @@ hutch shell trabalho
 # Switch to a different profile with a separate account
 hutch pessoal login
 hutch pessoal
+```
+
+## Editor
+
+Hutch opens files in your preferred editor for `new` and `edit` commands. The editor is resolved in this order:
+
+1. `$VISUAL` environment variable
+2. `$EDITOR` environment variable
+3. Hutch config (`hutch config editor`)
+4. Auto-detect: `sensible-editor`, `nano`, `vim`, `vi`
+
+```bash
+hutch config editor nano           # save a preference
+hutch config editor                # show current setting
+hutch config                       # show full configuration
+```
+
+```bash
+hutch edit image claude            # edit images/claude/Dockerfile
+hutch edit base claude             # edit bases/claude.yml
+hutch edit profile trabalho        # edit ~/.config/hutch/trabalho
 ```
 
 ## Adding a new environment
