@@ -1,0 +1,3 @@
+BASE="claude"
+COMMAND="claude"
+DESCRIPTION="Claude – personal account"

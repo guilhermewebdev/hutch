@@ -1,0 +1,3 @@
+BASE="gemini"
+COMMAND="gemini"
+DESCRIPTION="Google Gemini CLI"

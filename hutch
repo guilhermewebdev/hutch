@@ -1,0 +1,293 @@
+#!/usr/bin/env bash
+# AI profile manager via Docker Compose.
+#
+# Three layers:
+#   Image   — images/<name>/Dockerfile       (installed software)
+#   Base    — bases/<name>.yml               (runtime definitions)
+#   Profile — ~/.config/hutch/<name>      (BASE + COMMAND + DESCRIPTION)
+#
+# The workspace is always the current directory ($PWD).
+# Profile state persists in the Docker volume <profile>_home.
+set -euo pipefail
+
+SCRIPT_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
+IMAGES_DIR="$SCRIPT_DIR/images"
+BASES_DIR="$SCRIPT_DIR/bases"
+PROFILES_DIR="$HOME/.config/hutch"
+
+_usage() {
+  cat <<EOF
+usage:
+  hutch <profile> [args...]    run the profile's default command in the current directory
+  hutch shell <profile>        open an interactive shell in the profile
+
+  hutch list [bases|images]    list profiles, available bases, or built images
+  hutch build <base>           build the image for a base
+  hutch rebuild <base>         force rebuild the image (no cache)
+
+  hutch new base <name>        create a new base and open it in the editor
+  hutch new image <name>       create a new Dockerfile and open it in the editor
+
+  hutch remove <profile>       delete the profile volume (keeps the profile file)
+
+Examples:
+  hutch work                   run claude in the current directory using the work profile
+  hutch work login             authenticate in the work profile
+  hutch shell personal         interactive shell in the personal profile
+  hutch new base my-base       create bases/my-base.yml and open in editor
+  hutch new image my-img       create images/my-img/Dockerfile and open in editor
+  hutch build claude           build ai-hutch-claude:latest
+  hutch list bases             list bases and image status
+EOF
+}
+
+# --- Editor ---
+
+_open_editor() {
+  local file="$1"
+  local editor="${VISUAL:-${EDITOR:-}}"
+  if [ -z "$editor" ]; then
+    for e in sensible-editor nano vim vi; do
+      if command -v "$e" &>/dev/null; then
+        editor="$e"
+        break
+      fi
+    done
+  fi
+  if [ -z "$editor" ]; then
+    echo "No editor found. Set \$EDITOR or \$VISUAL." >&2
+    exit 1
+  fi
+  "$editor" "$file"
+}
+
+# --- Profiles ---
+
+_load_profile() {
+  local profile="$1"
+  local config="$PROFILES_DIR/$profile"
+  if [ ! -f "$config" ]; then
+    echo "Profile '$profile' not found in $PROFILES_DIR" >&2
+    echo "" >&2
+    _list_profiles >&2
+    exit 1
+  fi
+  BASE="" COMMAND="" DESCRIPTION=""
+  # shellcheck source=/dev/null
+  source "$config"
+}
+
+_list_profiles() {
+  echo "Profiles in $PROFILES_DIR:"
+  echo ""
+  if [ -z "$(ls -A "$PROFILES_DIR" 2>/dev/null)" ]; then
+    echo "  (no profiles)"
+    return
+  fi
+  for config in "$PROFILES_DIR"/*; do
+    [ -f "$config" ] || continue
+    local name
+    name="$(basename "$config")"
+    BASE="" COMMAND="" DESCRIPTION=""
+    # shellcheck source=/dev/null
+    source "$config"
+    local vol_status
+    vol_status="$(docker volume inspect "${name}_home" &>/dev/null && echo "volume: exists" || echo "volume: new")"
+    printf "  %-15s  %s\n" "$name" "$DESCRIPTION"
+    printf "  %-15s  base: %-12s | cmd: %-10s | %s\n" "" "$BASE" "$COMMAND" "$vol_status"
+    echo ""
+  done
+}
+
+# --- Bases ---
+
+_base_file() { echo "$BASES_DIR/$1.yml"; }
+
+_list_bases() {
+  echo "Bases in $BASES_DIR:"
+  echo ""
+  if [ -z "$(ls -A "$BASES_DIR" 2>/dev/null)" ]; then
+    echo "  (no bases)"
+    return
+  fi
+  for f in "$BASES_DIR"/*.yml; do
+    [ -f "$f" ] || continue
+    local name image img_status
+    name="$(basename "$f" .yml)"
+    image="ai-hutch-$name:latest"
+    img_status="$(docker image inspect "$image" &>/dev/null && echo "image ok" || echo "image missing")"
+    printf "  %-15s  %s\n" "$name" "$f"
+    printf "  %-15s  image: %-30s [%s]\n" "" "$image" "$img_status"
+    echo ""
+  done
+}
+
+_new_base() {
+  local name="${1:?usage: hutch new base <name>}"
+  local dest="$BASES_DIR/$name.yml"
+  if [ -f "$dest" ]; then
+    echo "Base '$name' already exists: $dest"
+    _open_editor "$dest"
+    return
+  fi
+  cat > "$dest" <<EOF
+services:
+  main:
+    build:
+      context: "\${BOX_IMAGES_DIR}/$name"
+    image: "ai-hutch-$name:latest"
+    stdin_open: true
+    tty: true
+    user: "\${BOX_UID}:\${BOX_GID}"
+    environment:
+      - HOME=/home/user
+    group_add:
+      - "\${BOX_DOCKER_GID}"
+    volumes:
+      - profile_home:/home/user
+      - "\${BOX_WORKSPACE}:/workspace"
+      - /var/run/docker.sock:/var/run/docker.sock
+    working_dir: /workspace
+
+volumes:
+  profile_home:
+    name: "\${BOX_PROFILE}_home"
+EOF
+  echo "Base created: $dest"
+  _open_editor "$dest"
+}
+
+# --- Images ---
+
+_list_images() {
+  echo "ai-hutch-* images in Docker:"
+  echo ""
+  if ! docker images "ai-hutch-*" --format "  {{.Repository}}:{{.Tag}}\t{{.Size}}\t{{.CreatedSince}}" 2>/dev/null | grep .; then
+    echo "  (no images built)"
+  fi
+}
+
+_new_image() {
+  local name="${1:?usage: hutch new image <name>}"
+  local dir="$IMAGES_DIR/$name"
+  local dest="$dir/Dockerfile"
+  mkdir -p "$dir"
+  if [ -f "$dest" ]; then
+    echo "Dockerfile '$name' already exists: $dest"
+    _open_editor "$dest"
+    return
+  fi
+  cat > "$dest" <<'EOF'
+FROM debian:bookworm
+
+RUN apt-get update && apt-get install -y \
+    curl wget git vim nano less \
+    procps jq \
+    ca-certificates gnupg \
+    && rm -rf /var/lib/apt/lists/*
+
+# Node.js via official NodeSource script
+RUN curl -fsSL https://deb.nodesource.com/setup_lts.x | bash - \
+    && apt-get install -y nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
+# TODO: install the desired CLI
+# RUN npm install -g @anthropic-ai/claude-code
+
+# Home directory accessible to any UID (required for arbitrary user in docker compose)
+RUN mkdir -p /home/user && chmod 777 /home/user
+ENV HOME=/home/user
+EOF
+  echo "Dockerfile created: $dest"
+  _open_editor "$dest"
+}
+
+_build_base() {
+  local base="$1" no_cache="${2:-}"
+  local base_file
+  base_file="$(_base_file "$base")"
+  if [ ! -f "$base_file" ]; then
+    echo "Base '$base' not found: $base_file" >&2
+    exit 1
+  fi
+  _export_env "_build"
+  docker compose -f "$base_file" build $no_cache
+}
+
+# --- Runtime ---
+
+_export_env() {
+  local profile="$1"
+  export BOX_PROFILE="$profile"
+  export BOX_WORKSPACE="$PWD"
+  export BOX_IMAGES_DIR="$IMAGES_DIR"
+  export BOX_UID="$(id -u)"
+  export BOX_GID="$(id -g)"
+  export BOX_DOCKER_GID="$(getent group docker 2>/dev/null | cut -d: -f3 || echo 999)"
+}
+
+_run() {
+  local profile="$1" base_file="$2"
+  shift 2
+  _export_env "$profile"
+  exec docker compose -f "$base_file" run --rm main "$@"
+}
+
+# --- Entrypoint ---
+
+cmd="${1:-}"
+
+case "$cmd" in
+  list)
+    case "${2:-}" in
+      bases)  _list_bases ;;
+      images) _list_images ;;
+      *)      _list_profiles ;;
+    esac
+    ;;
+
+  new)
+    case "${2:-}" in
+      base)  _new_base "${3:-}" ;;
+      image) _new_image "${3:-}" ;;
+      *) echo "usage: hutch new base|image <name>" >&2; exit 1 ;;
+    esac
+    ;;
+
+  build)
+    _build_base "${2:?usage: hutch build <base>}"
+    ;;
+
+  rebuild)
+    _build_base "${2:?usage: hutch rebuild <base>}" "--no-cache"
+    ;;
+
+  shell)
+    profile="${2:?usage: hutch shell <profile>}"
+    _load_profile "$profile"
+    _run "$profile" "$(_base_file "$BASE")" bash
+    ;;
+
+  remove)
+    profile="${2:?usage: hutch remove <profile>}"
+    echo "Removing volume '${profile}_home'..."
+    docker volume rm "${profile}_home" 2>/dev/null || echo "Volume not found."
+    echo "Profile file at $PROFILES_DIR/$profile was kept."
+    ;;
+
+  "" | -h | --help)
+    _usage
+    ;;
+
+  *)
+    profile="$cmd"
+    shift
+    _load_profile "$profile"
+    base_file="$(_base_file "$BASE")"
+    if [ ! -f "$base_file" ]; then
+      echo "Base '$BASE' not found: $base_file" >&2
+      exit 1
+    fi
+    _run "$profile" "$base_file" "$COMMAND" "$@"
+    ;;
+esac

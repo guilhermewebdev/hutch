@@ -1,0 +1,21 @@
+services:
+  main:
+    build:
+      context: "${BOX_IMAGES_DIR}/gemini"
+    image: "ai-box-gemini:latest"
+    stdin_open: true
+    tty: true
+    user: "${BOX_UID}:${BOX_GID}"
+    environment:
+      - HOME=/home/user
+    group_add:
+      - "${BOX_DOCKER_GID}"
+    volumes:
+      - profile_home:/home/user
+      - "${BOX_WORKSPACE}:/workspace"
+      - /var/run/docker.sock:/var/run/docker.sock
+    working_dir: /workspace
+
+volumes:
+  profile_home:
+    name: "${BOX_PROFILE}_home"
