@@ -44,7 +44,7 @@ Examples:
   hutch edit base claude             edit the claude base
   hutch edit image claude            edit the claude Dockerfile
   hutch config editor nano           set nano as the preferred editor
-  hutch build claude                 build ai-box-claude:latest
+  hutch build claude                 build hutch-claude:latest
   hutch list bases                   list bases and image status
 EOF
 }
@@ -223,24 +223,24 @@ _new_base() {
 services:
   main:
     build:
-      context: "\${BOX_IMAGES_DIR}/\${BOX_BUILD}"
-    image: "\${BOX_IMAGE}"
+      context: "\${HUTCH_IMAGES_DIR}/\${HUTCH_BUILD}"
+    image: "\${HUTCH_IMAGE}"
     stdin_open: true
     tty: true
-    user: "\${BOX_UID}:\${BOX_GID}"
+    user: "\${HUTCH_UID}:\${HUTCH_GID}"
     environment:
       - HOME=/home/user
     group_add:
-      - "\${BOX_DOCKER_GID}"
+      - "\${HUTCH_DOCKER_GID}"
     volumes:
       - profile_home:/home/user
-      - "\${BOX_WORKSPACE}:/workspace"
+      - "\${HUTCH_WORKSPACE}:/workspace"
       - /var/run/docker.sock:/var/run/docker.sock
     working_dir: /workspace
 
 volumes:
   profile_home:
-    name: "\${BOX_PROFILE}_home"
+    name: "\${HUTCH_PROFILE}_home"
 EOF
   echo "Base created: $dest"
   _open_editor "$dest"
@@ -249,9 +249,9 @@ EOF
 # --- Images ---
 
 _list_images() {
-  echo "ai-box-* images in Docker:"
+  echo "hutch-* images in Docker:"
   echo ""
-  if ! docker images "ai-box-*" --format "  {{.Repository}}:{{.Tag}}\t{{.Size}}\t{{.CreatedSince}}" 2>/dev/null | grep .; then
+  if ! docker images "hutch-*" --format "  {{.Repository}}:{{.Tag}}\t{{.Size}}\t{{.CreatedSince}}" 2>/dev/null | grep .; then
     echo "  (no images built)"
   fi
 }
@@ -307,14 +307,14 @@ _build_base() {
 
 _export_env() {
   local profile="$1"
-  export BOX_PROFILE="$profile"
-  export BOX_BUILD="${BUILD:-}"
-  export BOX_IMAGE="ai-box-${BUILD:-unknown}:latest"
-  export BOX_WORKSPACE="$PWD"
-  export BOX_IMAGES_DIR="$IMAGES_DIR"
-  export BOX_UID="$(id -u)"
-  export BOX_GID="$(id -g)"
-  export BOX_DOCKER_GID="$(getent group docker 2>/dev/null | cut -d: -f3 || echo 999)"
+  export HUTCH_PROFILE="$profile"
+  export HUTCH_BUILD="${BUILD:-}"
+  export HUTCH_IMAGE="hutch-${BUILD:-unknown}:latest"
+  export HUTCH_WORKSPACE="$PWD"
+  export HUTCH_IMAGES_DIR="$IMAGES_DIR"
+  export HUTCH_UID="$(id -u)"
+  export HUTCH_GID="$(id -g)"
+  export HUTCH_DOCKER_GID="$(getent group docker 2>/dev/null | cut -d: -f3 || echo 999)"
 }
 
 _run() {

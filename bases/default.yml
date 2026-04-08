@@ -1,21 +1,21 @@
 services:
   main:
     build:
-      context: "${BOX_IMAGES_DIR}/${BOX_BUILD}"
-    image: "${BOX_IMAGE}"
+      context: "${HUTCH_IMAGES_DIR}/${HUTCH_BUILD}"
+    image: "${HUTCH_IMAGE}"
     stdin_open: true
     tty: true
-    user: "${BOX_UID}:${BOX_GID}"
+    user: "${HUTCH_UID}:${HUTCH_GID}"
     environment:
       - HOME=/home/user
     group_add:
-      - "${BOX_DOCKER_GID}"
+      - "${HUTCH_DOCKER_GID}"
     volumes:
       - profile_home:/home/user
-      - "${BOX_WORKSPACE}:/workspace"
+      - "${HUTCH_WORKSPACE}:/workspace"
       - /var/run/docker.sock:/var/run/docker.sock
     working_dir: /workspace
 
 volumes:
   profile_home:
-    name: "${BOX_PROFILE}_home"
+    name: "${HUTCH_PROFILE}_home"
