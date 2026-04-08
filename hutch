@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# AI profile manager via Docker Compose.
+# Hutch — isolated CLI environments via Docker Compose.
 #
 # Three layers:
 #   Image   — images/<name>/Dockerfile       (installed software)
 #   Base    — bases/<name>.yml               (runtime definitions)
-#   Profile — ~/.config/hutch/<name>      (BASE + COMMAND + DESCRIPTION)
+#   Profile — ~/.config/hutch/<name>         (BASE + COMMAND + DESCRIPTION)
 #
 # The workspace is always the current directory ($PWD).
 # Profile state persists in the Docker volume <profile>_home.
@@ -14,38 +14,96 @@ SCRIPT_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
 IMAGES_DIR="$SCRIPT_DIR/images"
 BASES_DIR="$SCRIPT_DIR/bases"
 PROFILES_DIR="$HOME/.config/hutch"
+CONFIG_FILE="$PROFILES_DIR/.config"
 
 _usage() {
   cat <<EOF
 usage:
-  hutch <profile> [args...]    run the profile's default command in the current directory
-  hutch shell <profile>        open an interactive shell in the profile
+  hutch <profile> [args...]          run the profile's default command in the current directory
+  hutch shell <profile>              open an interactive shell in the profile
 
-  hutch list [bases|images]    list profiles, available bases, or built images
-  hutch build <base>           build the image for a base
-  hutch rebuild <base>         force rebuild the image (no cache)
+  hutch list [bases|images]          list profiles, available bases, or built images
+  hutch build <base>                 build the image for a base
+  hutch rebuild <base>               force rebuild the image (no cache)
 
-  hutch new base <name>        create a new base and open it in the editor
-  hutch new image <name>       create a new Dockerfile and open it in the editor
+  hutch new base <name>              create a new base and open it in the editor
+  hutch new image <name>             create a new Dockerfile and open it in the editor
 
-  hutch remove <profile>       delete the profile volume (keeps the profile file)
+  hutch edit image|base|profile <name>   open an existing file in the editor
+
+  hutch config editor [value]        get or set the preferred editor
+  hutch config                       show all configuration
+
+  hutch remove <profile>             delete the profile volume (keeps the profile file)
 
 Examples:
-  hutch work                   run claude in the current directory using the work profile
-  hutch work login             authenticate in the work profile
-  hutch shell personal         interactive shell in the personal profile
-  hutch new base my-base       create bases/my-base.yml and open in editor
-  hutch new image my-img       create images/my-img/Dockerfile and open in editor
-  hutch build claude           build ai-hutch-claude:latest
-  hutch list bases             list bases and image status
+  hutch work                         run claude in the current directory using the work profile
+  hutch work login                   authenticate in the work profile
+  hutch shell personal               interactive shell in the personal profile
+  hutch edit profile work            edit the work profile file
+  hutch edit base claude             edit the claude base
+  hutch edit image claude            edit the claude Dockerfile
+  hutch config editor nano           set nano as the preferred editor
+  hutch build claude                 build ai-box-claude:latest
+  hutch list bases                   list bases and image status
 EOF
+}
+
+# --- Config ---
+
+_load_config() {
+  HUTCH_EDITOR=""
+  if [ -f "$CONFIG_FILE" ]; then
+    # shellcheck source=/dev/null
+    source "$CONFIG_FILE"
+  fi
+}
+
+_config_get() {
+  local key="$1"
+  _load_config
+  case "$key" in
+    editor) echo "${HUTCH_EDITOR:-}" ;;
+    *) echo "Unknown config key: $key" >&2; exit 1 ;;
+  esac
+}
+
+_config_set() {
+  local key="$1" value="$2"
+  mkdir -p "$PROFILES_DIR"
+  touch "$CONFIG_FILE"
+  case "$key" in
+    editor)
+      # Update or append
+      if grep -q "^HUTCH_EDITOR=" "$CONFIG_FILE" 2>/dev/null; then
+        sed -i "s|^HUTCH_EDITOR=.*|HUTCH_EDITOR=\"$value\"|" "$CONFIG_FILE"
+      else
+        echo "HUTCH_EDITOR=\"$value\"" >> "$CONFIG_FILE"
+      fi
+      echo "Editor set to: $value"
+      ;;
+    *) echo "Unknown config key: $key" >&2; exit 1 ;;
+  esac
+}
+
+_config_show() {
+  _load_config
+  echo "Configuration ($CONFIG_FILE):"
+  echo ""
+  echo "  editor   ${HUTCH_EDITOR:-(not set — using \$VISUAL / \$EDITOR / auto-detect)}"
+  echo ""
+  echo "Environment overrides (take priority over config):"
+  echo "  \$VISUAL  ${VISUAL:-  (not set)}"
+  echo "  \$EDITOR  ${EDITOR:-  (not set)}"
 }
 
 # --- Editor ---
 
 _open_editor() {
   local file="$1"
-  local editor="${VISUAL:-${EDITOR:-}}"
+  _load_config
+  # Priority: $VISUAL > $EDITOR > hutch config > auto-detect
+  local editor="${VISUAL:-${EDITOR:-${HUTCH_EDITOR:-}}}"
   if [ -z "$editor" ]; then
     for e in sensible-editor nano vim vi; do
       if command -v "$e" &>/dev/null; then
@@ -55,7 +113,7 @@ _open_editor() {
     done
   fi
   if [ -z "$editor" ]; then
-    echo "No editor found. Set \$EDITOR or \$VISUAL." >&2
+    echo "No editor found. Set one with: hutch config editor <name>" >&2
     exit 1
   fi
   "$editor" "$file"
@@ -80,10 +138,7 @@ _load_profile() {
 _list_profiles() {
   echo "Profiles in $PROFILES_DIR:"
   echo ""
-  if [ -z "$(ls -A "$PROFILES_DIR" 2>/dev/null)" ]; then
-    echo "  (no profiles)"
-    return
-  fi
+  local found=0
   for config in "$PROFILES_DIR"/*; do
     [ -f "$config" ] || continue
     local name
@@ -96,7 +151,39 @@ _list_profiles() {
     printf "  %-15s  %s\n" "$name" "$DESCRIPTION"
     printf "  %-15s  base: %-12s | cmd: %-10s | %s\n" "" "$BASE" "$COMMAND" "$vol_status"
     echo ""
+    found=1
   done
+  [ "$found" -eq 0 ] && echo "  (no profiles)"
+}
+
+# --- Edit ---
+
+_edit() {
+  local type="${1:-}" name="${2:-}"
+  if [ -z "$type" ] || [ -z "$name" ]; then
+    echo "usage: hutch edit image|base|profile <name>" >&2
+    exit 1
+  fi
+  local file
+  case "$type" in
+    image)
+      file="$IMAGES_DIR/$name/Dockerfile"
+      [ -f "$file" ] || { echo "Image '$name' not found: $file" >&2; exit 1; }
+      ;;
+    base)
+      file="$BASES_DIR/$name.yml"
+      [ -f "$file" ] || { echo "Base '$name' not found: $file" >&2; exit 1; }
+      ;;
+    profile)
+      file="$PROFILES_DIR/$name"
+      [ -f "$file" ] || { echo "Profile '$name' not found: $file" >&2; exit 1; }
+      ;;
+    *)
+      echo "usage: hutch edit image|base|profile <name>" >&2
+      exit 1
+      ;;
+  esac
+  _open_editor "$file"
 }
 
 # --- Bases ---
@@ -114,7 +201,7 @@ _list_bases() {
     [ -f "$f" ] || continue
     local name image img_status
     name="$(basename "$f" .yml)"
-    image="ai-hutch-$name:latest"
+    image="ai-box-$name:latest"
     img_status="$(docker image inspect "$image" &>/dev/null && echo "image ok" || echo "image missing")"
     printf "  %-15s  %s\n" "$name" "$f"
     printf "  %-15s  image: %-30s [%s]\n" "" "$image" "$img_status"
@@ -135,7 +222,7 @@ services:
   main:
     build:
       context: "\${BOX_IMAGES_DIR}/$name"
-    image: "ai-hutch-$name:latest"
+    image: "ai-box-$name:latest"
     stdin_open: true
     tty: true
     user: "\${BOX_UID}:\${BOX_GID}"
@@ -160,9 +247,9 @@ EOF
 # --- Images ---
 
 _list_images() {
-  echo "ai-hutch-* images in Docker:"
+  echo "ai-box-* images in Docker:"
   echo ""
-  if ! docker images "ai-hutch-*" --format "  {{.Repository}}:{{.Tag}}\t{{.Size}}\t{{.CreatedSince}}" 2>/dev/null | grep .; then
+  if ! docker images "ai-box-*" --format "  {{.Repository}}:{{.Tag}}\t{{.Size}}\t{{.CreatedSince}}" 2>/dev/null | grep .; then
     echo "  (no images built)"
   fi
 }
@@ -251,6 +338,24 @@ case "$cmd" in
       base)  _new_base "${3:-}" ;;
       image) _new_image "${3:-}" ;;
       *) echo "usage: hutch new base|image <name>" >&2; exit 1 ;;
+    esac
+    ;;
+
+  edit)
+    _edit "${2:-}" "${3:-}"
+    ;;
+
+  config)
+    case "${2:-}" in
+      editor)
+        if [ -n "${3:-}" ]; then
+          _config_set editor "$3"
+        else
+          _config_get editor
+        fi
+        ;;
+      "") _config_show ;;
+      *)  echo "usage: hutch config editor [value]" >&2; exit 1 ;;
     esac
     ;;
 
