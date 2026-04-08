@@ -78,17 +78,17 @@ hutch remove <profile>                 # delete the profile's volume (keeps the 
 hutch build claude
 
 # Run Claude in the current directory using the work profile
-hutch trabalho
+hutch work
 
 # Authenticate (stored in the profile's volume)
-hutch trabalho login
+hutch work login
 
 # Open a shell to configure git, SSH keys, etc.
-hutch shell trabalho
+hutch shell work
 
 # Switch to a different profile with a separate account
-hutch pessoal login
-hutch pessoal
+hutch personal login
+hutch personal
 ```
 
 ## Editor
@@ -109,7 +109,7 @@ hutch config                       # show full configuration
 ```bash
 hutch edit image claude            # edit images/claude/Dockerfile
 hutch edit base claude             # edit bases/claude.yml
-hutch edit profile trabalho        # edit ~/.config/hutch/trabalho
+hutch edit profile work        # edit ~/.config/hutch/work
 ```
 
 ## Adding a new environment
