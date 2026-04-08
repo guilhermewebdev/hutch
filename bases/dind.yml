@@ -1,0 +1,49 @@
+# Docker-in-Docker base
+#
+# Runs an isolated Docker daemon inside the environment instead of sharing
+# the host socket. Useful when you want full Docker access without exposing
+# the host daemon to the container.
+#
+# The docker sidecar starts automatically alongside the main container.
+# Stop it when done: docker compose -f <this-file> down
+
+services:
+  main:
+    build:
+      context: "${HUTCH_IMAGES_DIR}/${HUTCH_BUILD}"
+    image: "${HUTCH_IMAGE}"
+    stdin_open: true
+    tty: true
+    user: "${HUTCH_UID}:${HUTCH_GID}"
+    environment:
+      - HOME=/home/user
+      - DOCKER_HOST=tcp://docker:2376
+      - DOCKER_TLS_VERIFY=1
+      - DOCKER_CERT_PATH=/certs/client
+    volumes:
+      - profile_home:/home/user
+      - "${HUTCH_WORKSPACE}:/workspace"
+      - dind_certs:/certs/client:ro
+    working_dir: /workspace
+    depends_on:
+      docker:
+        condition: service_healthy
+
+  docker:
+    image: docker:dind
+    privileged: true
+    environment:
+      - DOCKER_TLS_CERTDIR=/certs
+    volumes:
+      - dind_certs:/certs
+    healthcheck:
+      test: ["CMD", "docker", "info"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  profile_home:
+    name: "${HUTCH_PROFILE}_home"
+  dind_certs:
+    name: "${HUTCH_PROFILE}_dind_certs"

@@ -1,0 +1,4 @@
+BUILD="claude"
+BASE="dind"
+COMMAND="claude"
+DESCRIPTION="Claude with isolated Docker daemon (DinD)"
