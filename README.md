@@ -59,6 +59,7 @@ curl -fsSL https://raw.githubusercontent.com/guilhermewebdev/hutch/main/uninstal
 ```bash
 hutch <profile> [args...]              # run the profile's default command in the current directory
 hutch shell <profile>                  # open an interactive shell in the profile
+hutch exec <profile> [command]        # exec into a running container of the profile (default: bash)
 hutch list                             # list profiles and volume status
 hutch list bases                       # list bases and image status
 hutch list images                      # list built Docker images
