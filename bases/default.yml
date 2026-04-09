@@ -13,6 +13,7 @@ services:
       - HUTCH_UID
       - HUTCH_GID
       - HUTCH_DOCKER_GID
+      - TERM
     volumes:
       - profile_home:/home/user
       - "${HUTCH_WORKSPACE}:/workspace"
