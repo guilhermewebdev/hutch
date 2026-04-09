@@ -348,9 +348,16 @@ _check_workspace_depth() {
   depth="$(echo "$PWD" | tr -cd '/' | wc -c)"
   if [ "$depth" -lt 4 ]; then
     echo "Warning: running hutch from a shallow path ($PWD)." >&2
-    echo "  Files in this directory will be visible inside the container." >&2
+    echo "  All files here will be visible inside the container." >&2
     echo "  Consider running from a specific project directory instead." >&2
     echo "" >&2
+    printf "Continue anyway? [y/N] " >&2
+    local yn=""
+    read -r yn </dev/tty 2>/dev/null || read -r yn 2>/dev/null || true
+    echo "" >&2
+    if [[ ! "${yn:-n}" =~ ^[Yy]$ ]]; then
+      exit 1
+    fi
   fi
 }
 
