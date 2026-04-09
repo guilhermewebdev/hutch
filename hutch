@@ -35,7 +35,7 @@ usage:
   hutch config editor [value]        get or set the preferred editor
   hutch config                       show all configuration
 
-  hutch remove <profile>             delete the profile volume (keeps the profile file)
+  hutch purge <profile>              delete the profile volume/state (keeps the profile file)
 
   hutch update                       update hutch to the latest version (preserves user files)
   hutch update --force               update and overwrite local modifications to hutch files
@@ -464,9 +464,9 @@ case "$cmd" in
     _update "${2:-}"
     ;;
 
-  remove)
-    profile="${2:?usage: hutch remove <profile>}"
-    echo "Removing volume '${profile}_home'..."
+  purge)
+    profile="${2:?usage: hutch purge <profile>}"
+    echo "Purging state for profile '${profile}' (volume: ${profile}_home)..."
     docker volume rm "${profile}_home" 2>/dev/null || echo "Volume not found."
     echo "Profile file at $PROFILES_DIR/$profile was kept."
     ;;

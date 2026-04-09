@@ -74,7 +74,7 @@ hutch edit image|base|profile <name>   # open an existing file in the editor
 hutch config                           # show configuration
 hutch config editor [value]            # get or set the preferred editor
 
-hutch remove <profile>                 # delete the profile's volume (keeps the profile file)
+hutch purge <profile>                  # delete the profile's volume/state (keeps the profile file)
 ```
 
 ## Quickstart
@@ -166,7 +166,7 @@ Each profile has its own Docker volume (`<profile>_home`) mounted at `/home/user
 Deleting a volume discards all state for that profile:
 
 ```bash
-hutch remove work
+hutch purge work
 ```
 
 The profile file in `~/.config/hutch/` is kept — recreating the volume starts fresh.
