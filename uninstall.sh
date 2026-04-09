@@ -18,7 +18,7 @@ _confirm() {
   # Print the prompt explicitly so it always appears regardless of where read pulls from.
   # When piped via curl/wget, stdin is the script — prefer /dev/tty so the
   # user can still answer interactively. Fall back to stdin (CI, restricted envs).
-  printf "%s [y/N] " "$prompt"
+  printf "%s [y/N] " "$prompt" >&2
   { read -r yn </dev/tty; } 2>/dev/null || read -r yn
   [[ "${yn:-n}" =~ ^[Yy]$ ]]
 }
@@ -38,6 +38,9 @@ echo ""
 echo "  bin:      ${HUTCH_BIN}"
 echo "  install:  ${INSTALL_DIR:-(not found via symlink)}"
 echo "  profiles: ${PROFILES_DIR}"
+echo ""
+echo "Each step will ask for confirmation."
+echo "Type 'y' + Enter to confirm, or just Enter to skip."
 echo ""
 
 if ! _confirm "Proceed with uninstall?"; then
