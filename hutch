@@ -19,8 +19,8 @@ CONFIG_FILE="$PROFILES_DIR/.config"
 _usage() {
   cat <<EOF
 usage:
-  hutch <profile> [args...]          run the profile's default command in the current directory
-  hutch shell <profile>              open an interactive shell in the profile
+  hutch [--yes|-y] <profile> [args...]   run the profile's default command in the current directory
+  hutch [--yes|-y] shell <profile>       open an interactive shell in the profile
   hutch exec <profile> [command]     exec into a running container of the profile (default: bash)
 
   hutch list [bases|images]          list profiles, available bases, or built images
@@ -351,6 +351,9 @@ _check_workspace_depth() {
     echo "  All files here will be visible inside the container." >&2
     echo "  Consider running from a specific project directory instead." >&2
     echo "" >&2
+    if [ "${HUTCH_YES:-0}" = "1" ]; then
+      return
+    fi
     printf "Continue anyway? [y/N] " >&2
     local yn=""
     { read -r yn </dev/tty; } 2>/dev/null || read -r yn 2>/dev/null || true
@@ -445,6 +448,12 @@ _update() {
 }
 
 # --- Entrypoint ---
+
+HUTCH_YES=0
+if [[ "${1:-}" == "--yes" || "${1:-}" == "-y" ]]; then
+  HUTCH_YES=1
+  shift
+fi
 
 cmd="${1:-}"
 
