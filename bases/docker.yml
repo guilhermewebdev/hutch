@@ -1,3 +1,14 @@
+# Docker socket base
+#
+# Mounts the host Docker socket inside the container, giving full Docker CLI
+# access (docker, docker compose, etc.) without a separate daemon.
+#
+# WARNING: any process in the container — including AI agents — can use this
+# socket to run privileged containers with full access to the host filesystem.
+# Use only in trusted contexts where Docker access is explicitly required.
+#
+# To use: set BASE="docker" in your profile.
+
 services:
   main:
     build:
@@ -19,6 +30,7 @@ services:
     volumes:
       - profile_home:/home/user
       - "${HUTCH_WORKSPACE}:${HUTCH_WORKSPACE}"
+      - /var/run/docker.sock:/var/run/docker.sock
     working_dir: "${HUTCH_WORKSPACE}"
 
 volumes:
