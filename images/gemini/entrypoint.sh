@@ -1,6 +1,7 @@
 #!/bin/bash
-# Entrypoint: creates a user inside the container matching the host's UID/GID/username,
-# then drops privileges and executes the given command as that user.
+# Entrypoint: registers the host user inside the container by writing directly
+# to /etc/passwd and /etc/group (avoids groupadd/useradd locking issues on
+# Docker Desktop and rootless Docker), then drops privileges via gosu.
 set -e
 
 USERNAME="${HUTCH_USER:-user}"
@@ -8,25 +9,28 @@ UID_VAL="${HUTCH_UID:-1000}"
 GID_VAL="${HUTCH_GID:-1000}"
 DOCKER_GID="${HUTCH_DOCKER_GID:-}"
 
-# Create the group for the user's GID if it doesn't exist yet
+# Register the user's primary group if the GID is not yet in /etc/group
 if ! getent group "$GID_VAL" &>/dev/null; then
-    groupadd -g "$GID_VAL" "$USERNAME"
+    echo "${USERNAME}:x:${GID_VAL}:" >> /etc/group
 fi
 
-# Create the user if the UID doesn't exist yet
+# Register the user in /etc/passwd if the UID is not yet present
 if ! getent passwd "$UID_VAL" &>/dev/null; then
-    useradd -u "$UID_VAL" -g "$GID_VAL" \
-            -d /home/user -s /bin/bash -M "$USERNAME"
+    echo "${USERNAME}:x:${UID_VAL}:${GID_VAL}::/home/user:/bin/bash" >> /etc/passwd
 fi
 
-# Add the user to the docker group so it can reach the host socket
+# Register the docker group and add the user to it
 if [ -n "$DOCKER_GID" ]; then
     if ! getent group "$DOCKER_GID" &>/dev/null; then
-        groupadd -g "$DOCKER_GID" docker
+        echo "docker:x:${DOCKER_GID}:${USERNAME}" >> /etc/group
+    else
+        # Group exists — append user if not already a member
+        docker_name="$(getent group "$DOCKER_GID" | cut -d: -f1)"
+        if ! getent group "$DOCKER_GID" | grep -qE "(^|,)${USERNAME}$"; then
+            sed -i "/^${docker_name}:/ s/$/,${USERNAME}/" /etc/group
+        fi
     fi
-    usermod -aG "$DOCKER_GID" "$USERNAME" 2>/dev/null || true
 fi
 
 export HOME=/home/user
-
 exec gosu "$USERNAME" "$@"
