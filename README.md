@@ -48,6 +48,12 @@ source ~/.bashrc
 
 To update hutch later, just re-run the one-liner — it pulls the latest changes and updates the symlink.
 
+**To uninstall:**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/guilhermewebdev/hutch/main/uninstall.sh | bash
+```
+
 ## Usage
 
 ```bash
