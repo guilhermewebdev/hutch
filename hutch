@@ -297,19 +297,19 @@ RUN apt-get update && apt-get install -y \
     curl wget git vim nano less \
     procps jq \
     ca-certificates gnupg \
-    && rm -rf /var/lib/apt/lists/*
-
-# Node.js via official NodeSource script
-RUN curl -fsSL https://deb.nodesource.com/setup_lts.x | bash - \
-    && apt-get install -y nodejs \
+    gosu \
     && rm -rf /var/lib/apt/lists/*
 
 # TODO: install the desired CLI
 # RUN npm install -g @anthropic-ai/claude-code
 
-# Home directory accessible to any UID (required for arbitrary user in docker compose)
-RUN mkdir -p /home/user && chmod 777 /home/user
+# Home directory — initialized here so the named volume inherits it on first mount
+RUN mkdir -p /home/user && chmod 755 /home/user
 ENV HOME=/home/user
+
+# Shared entrypoint: maps host UID/GID into the container and drops privileges via gosu
+COPY entrypoint.sh /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]
 EOF
   echo "Dockerfile created: $dest"
   _open_editor "$dest"

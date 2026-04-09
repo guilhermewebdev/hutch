@@ -1,7 +1,8 @@
 services:
   main:
     build:
-      context: "${HUTCH_IMAGES_DIR}/${HUTCH_BUILD}"
+      context: "${HUTCH_IMAGES_DIR}"
+      dockerfile: "${HUTCH_BUILD}/Dockerfile"
     image: "${HUTCH_IMAGE}"
     stdin_open: true
     tty: true
