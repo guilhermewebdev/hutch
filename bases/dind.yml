@@ -21,6 +21,7 @@ services:
       - HUTCH_USER
       - HUTCH_UID
       - HUTCH_GID
+      - HUTCH_WORKSPACE
       - TERM
       - COLORTERM
       - DOCKER_HOST=tcp://docker:2376
