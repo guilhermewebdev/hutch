@@ -6,6 +6,8 @@ services:
     stdin_open: true
     tty: true
     hostname: "${HUTCH_PROFILE}"
+    labels:
+      hutch.profile: "${HUTCH_PROFILE}"
     environment:
       - HUTCH_USER
       - HUTCH_UID

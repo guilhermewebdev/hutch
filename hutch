@@ -21,6 +21,7 @@ _usage() {
 usage:
   hutch <profile> [args...]          run the profile's default command in the current directory
   hutch shell <profile>              open an interactive shell in the profile
+  hutch exec <profile> [command]     exec into a running container of the profile (default: bash)
 
   hutch list [bases|images]          list profiles, available bases, or built images
   hutch build <image>                build the image (e.g. hutch build claude)
@@ -349,6 +350,24 @@ _run() {
   exec docker compose -f "$base_file" run --rm main "$@"
 }
 
+_exec_profile() {
+  local profile="$1"
+  shift
+  local cmd="${1:-bash}"
+  [ $# -gt 0 ] && shift
+
+  local container
+  container="$(docker ps --filter "label=hutch.profile=${profile}" --format "{{.ID}}" | head -1)"
+
+  if [ -z "$container" ]; then
+    echo "No running container found for profile '$profile'." >&2
+    echo "Start one first with: hutch $profile" >&2
+    exit 1
+  fi
+
+  exec docker exec -it "$container" "$cmd" "$@"
+}
+
 # --- Update ---
 
 _update() {
@@ -458,6 +477,11 @@ case "$cmd" in
     profile="${2:?usage: hutch shell <profile>}"
     _load_profile "$profile"
     _run "$profile" "$(_base_file "$BASE")" bash
+    ;;
+
+  exec)
+    profile="${2:?usage: hutch exec <profile> [command]}"
+    _exec_profile "$profile" "${@:3}"
     ;;
 
   update)
