@@ -36,9 +36,13 @@ if [ -n "$DOCKER_GID" ]; then
         echo "docker:x:${DOCKER_GID}:${USERNAME}" >> /etc/group
     else
         # Group exists — append user if not already a member
-        docker_name="$(getent group "$DOCKER_GID" | cut -d: -f1)"
-        if ! getent group "$DOCKER_GID" | grep -qE "(^|,)${USERNAME}$"; then
-            sed -i "/^${docker_name}:/ s/$/,${USERNAME}/" /etc/group
+        docker_line="$(getent group "$DOCKER_GID")"
+        docker_name="$(echo "$docker_line" | cut -d: -f1)"
+        docker_pass="$(echo "$docker_line" | cut -d: -f2)"
+        members="$(echo "$docker_line" | cut -d: -f4)"
+        if ! echo ",${members}," | grep -q ",${USERNAME},"; then
+            [ -n "$members" ] && new_members="${members},${USERNAME}" || new_members="$USERNAME"
+            sed -i "s|^${docker_name}:.*|${docker_name}:${docker_pass}:${DOCKER_GID}:${new_members}|" /etc/group
         fi
     fi
 fi
