@@ -344,10 +344,17 @@ _export_env() {
 }
 
 _check_workspace_depth() {
-  local depth
+  local depth reason=""
   depth="$(echo "$PWD" | tr -cd '/' | wc -c)"
+
   if [ "$depth" -lt 4 ]; then
-    echo "Warning: running hutch from a shallow path ($PWD)." >&2
+    reason="shallow path ($PWD)"
+  elif [[ "$PWD" != "$HOME" && "$PWD" != "$HOME/"* ]]; then
+    reason="path outside home ($PWD)"
+  fi
+
+  if [ -n "$reason" ]; then
+    echo "Warning: running hutch from a $reason." >&2
     echo "  All files here will be visible inside the container." >&2
     echo "  Consider running from a specific project directory instead." >&2
     echo "" >&2

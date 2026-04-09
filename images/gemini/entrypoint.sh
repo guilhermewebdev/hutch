@@ -57,20 +57,5 @@ if [ -n "${HUTCH_WORKSPACE:-}" ]; then
     ln -sfn "${HUTCH_WORKSPACE}" /workspace
 fi
 
-# Reset Claude's workspace trust when the mounted directory changes.
-# Claude caches trust for /workspace by path — since the path is always the same
-# inside the container, it would never ask again even when the project changes.
-WORKSPACE_TRACKER="/home/user/.claude_last_workspace"
-CLAUDE_JSON="/home/user/.claude.json"
-if [ -n "${HUTCH_WORKSPACE:-}" ] && [ -f "$CLAUDE_JSON" ]; then
-    last_workspace=""
-    [ -f "$WORKSPACE_TRACKER" ] && last_workspace="$(cat "$WORKSPACE_TRACKER")"
-    if [ "$last_workspace" != "$HUTCH_WORKSPACE" ]; then
-        new_json="$(jq 'del(."/workspace")' "$CLAUDE_JSON" 2>/dev/null)" \
-            && printf '%s\n' "$new_json" > "$CLAUDE_JSON"
-        printf '%s' "$HUTCH_WORKSPACE" > "$WORKSPACE_TRACKER"
-        chown "${UID_VAL}:${GID_VAL}" "$WORKSPACE_TRACKER"
-    fi
-fi
 
 exec gosu "$USERNAME" "$@"
