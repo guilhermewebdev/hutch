@@ -353,7 +353,7 @@ _check_workspace_depth() {
     echo "" >&2
     printf "Continue anyway? [y/N] " >&2
     local yn=""
-    read -r yn </dev/tty 2>/dev/null || read -r yn 2>/dev/null || true
+    { read -r yn </dev/tty; } 2>/dev/null || read -r yn 2>/dev/null || true
     echo "" >&2
     if [[ ! "${yn:-n}" =~ ^[Yy]$ ]]; then
       exit 1
