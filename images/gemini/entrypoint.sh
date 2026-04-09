@@ -50,6 +50,13 @@ fi
 chown "${UID_VAL}:${GID_VAL}" /home/user
 export HOME=/home/user
 
+# Create /workspace symlink pointing to the actual mounted workspace path.
+# This lets users type shorter paths (/workspace/...) while Docker Compose
+# on the host resolves bind mounts correctly via the real path.
+if [ -n "${HUTCH_WORKSPACE:-}" ]; then
+    ln -sfn "${HUTCH_WORKSPACE}" /workspace
+fi
+
 # Reset Claude's workspace trust when the mounted directory changes.
 # Claude caches trust for /workspace by path — since the path is always the same
 # inside the container, it would never ask again even when the project changes.

@@ -29,9 +29,9 @@ services:
       - DOCKER_CERT_PATH=/certs/client
     volumes:
       - profile_home:/home/user
-      - "${HUTCH_WORKSPACE}:/workspace"
+      - "${HUTCH_WORKSPACE}:${HUTCH_WORKSPACE}"
       - dind_certs:/certs/client:ro
-    working_dir: /workspace
+    working_dir: "${HUTCH_WORKSPACE}"
     depends_on:
       docker:
         condition: service_healthy

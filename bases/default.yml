@@ -18,9 +18,9 @@ services:
       - COLORTERM
     volumes:
       - profile_home:/home/user
-      - "${HUTCH_WORKSPACE}:/workspace"
+      - "${HUTCH_WORKSPACE}:${HUTCH_WORKSPACE}"
       - /var/run/docker.sock:/var/run/docker.sock
-    working_dir: /workspace
+    working_dir: "${HUTCH_WORKSPACE}"
 
 volumes:
   profile_home:
