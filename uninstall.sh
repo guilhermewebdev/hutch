@@ -15,8 +15,10 @@ DEFAULT_INSTALL_DIR="$HOME/.local/share/hutch"
 _confirm() {
   local prompt="$1"
   local yn
-  # When piped via curl/wget, stdin is the script itself — force /dev/tty
-  read -r -p "$prompt [y/N] " yn </dev/tty
+  # When piped via curl/wget, stdin is the script — prefer /dev/tty so the
+  # user can still answer interactively. Fall back to stdin (CI, restricted envs).
+  { read -r -p "$prompt [y/N] " yn </dev/tty; } 2>/dev/null \
+    || read -r -p "$prompt [y/N] " yn
   [[ "${yn:-n}" =~ ^[Yy]$ ]]
 }
 
