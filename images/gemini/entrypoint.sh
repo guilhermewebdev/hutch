@@ -32,5 +32,6 @@ if [ -n "$DOCKER_GID" ]; then
     fi
 fi
 
+chown "${UID_VAL}:${GID_VAL}" /home/user
 export HOME=/home/user
 exec gosu "$USERNAME" "$@"
