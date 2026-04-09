@@ -57,16 +57,17 @@ curl -fsSL https://raw.githubusercontent.com/guilhermewebdev/hutch/main/uninstal
 ## Usage
 
 ```bash
-hutch <profile> [args...]              # run the profile's default command in the current directory
-hutch shell <profile>                  # open an interactive shell in the profile
-hutch exec <profile> [command]        # exec into a running container of the profile (default: bash)
+hutch [--yes|-y] <profile> [args...]   # run the profile's default command in the current directory
+hutch [--yes|-y] shell <profile>       # open an interactive shell in the profile
+hutch exec <profile> [command]         # exec into a running container of the profile (default: bash)
 hutch list                             # list profiles and volume status
 hutch list bases                       # list bases and image status
 hutch list images                      # list built Docker images
 
-hutch build <base>                     # build the image for a base
-hutch rebuild <base>                   # force rebuild (no cache)
+hutch build <image>                    # build an image (e.g. hutch build claude)
+hutch rebuild <image>                  # force rebuild (no cache)
 
+hutch new profile <name>               # create a new profile and open in editor
 hutch new base <name>                  # create a new base and open in editor
 hutch new image <name>                 # create a new Dockerfile and open in editor
 
@@ -76,6 +77,12 @@ hutch config                           # show configuration
 hutch config editor [value]            # get or set the preferred editor
 
 hutch purge <profile>                  # delete the profile's volume/state (keeps the profile file)
+```
+
+The `--yes` / `-y` flag bypasses the workspace safety prompt. Useful in non-interactive scripts:
+
+```bash
+hutch --yes work                       # skip prompt when running from a shallow or unusual path
 ```
 
 ## Quickstart
@@ -160,6 +167,26 @@ The `ubuntu` profile opens bash directly, so `hutch ubuntu` drops you into an is
 hutch build ubuntu
 hutch ubuntu          # isolated bash shell in the current directory
 ```
+
+## Included bases
+
+| Base | Docker access | Use case |
+|---|---|---|
+| `default` | None | AI agents and tools that don't need Docker |
+| `docker` | Host socket (opt-in) | Running `docker`/`docker compose` from inside the container |
+| `dind` | Isolated daemon | Full Docker isolation — no host socket exposed |
+
+By default all profiles use `default` (no Docker access). To enable Docker CLI access, set `BASE="docker"` in your profile:
+
+```bash
+# ~/.config/hutch/my-profile
+BASE="docker"
+```
+
+> **Security note:** the `docker` base mounts `/var/run/docker.sock`, which gives the container
+> full Docker access — including the ability to run privileged containers with host filesystem
+> access. Any process inside (including AI agents) inherits this capability. Use only in contexts
+> you trust.
 
 ## Profile isolation
 
