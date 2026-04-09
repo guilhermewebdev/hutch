@@ -365,7 +365,7 @@ _exec_profile() {
     exit 1
   fi
 
-  exec docker exec -it "$container" "$cmd" "$@"
+  exec docker exec -it --user "$(id -u):$(id -g)" -e HOME=/home/user "$container" "$cmd" "$@"
 }
 
 # --- Update ---
