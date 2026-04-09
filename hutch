@@ -343,9 +343,21 @@ _export_env() {
   export HUTCH_DOCKER_GID="$(getent group docker 2>/dev/null | cut -d: -f3 || echo 999)"
 }
 
+_check_workspace_depth() {
+  local depth
+  depth="$(echo "$PWD" | tr -cd '/' | wc -c)"
+  if [ "$depth" -lt 4 ]; then
+    echo "Warning: running hutch from a shallow path ($PWD)." >&2
+    echo "  Files in this directory will be visible inside the container." >&2
+    echo "  Consider running from a specific project directory instead." >&2
+    echo "" >&2
+  fi
+}
+
 _run() {
   local profile="$1" base_file="$2"
   shift 2
+  _check_workspace_depth
   _export_env "$profile"
   exec docker compose -f "$base_file" run --rm main "$@"
 }
