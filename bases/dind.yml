@@ -14,9 +14,11 @@ services:
     image: "${HUTCH_IMAGE}"
     stdin_open: true
     tty: true
-    user: "${HUTCH_UID}:${HUTCH_GID}"
+    hostname: "${HUTCH_PROFILE}"
     environment:
-      - HOME=/home/user
+      - HUTCH_USER
+      - HUTCH_UID
+      - HUTCH_GID
       - DOCKER_HOST=tcp://docker:2376
       - DOCKER_TLS_VERIFY=1
       - DOCKER_CERT_PATH=/certs/client

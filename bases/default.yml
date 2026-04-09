@@ -5,11 +5,12 @@ services:
     image: "${HUTCH_IMAGE}"
     stdin_open: true
     tty: true
-    user: "${HUTCH_UID}:${HUTCH_GID}"
+    hostname: "${HUTCH_PROFILE}"
     environment:
-      - HOME=/home/user
-    group_add:
-      - "${HUTCH_DOCKER_GID}"
+      - HUTCH_USER
+      - HUTCH_UID
+      - HUTCH_GID
+      - HUTCH_DOCKER_GID
     volumes:
       - profile_home:/home/user
       - "${HUTCH_WORKSPACE}:/workspace"

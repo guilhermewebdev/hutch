@@ -1,11 +1,12 @@
 FROM debian:bookworm
 
-# Development tools
+# Development tools + gosu for privilege dropping in entrypoint
 RUN apt-get update && apt-get install -y \
     curl wget git vim nano less \
     procps jq unzip zip \
     build-essential python3 \
     openssh-client ca-certificates gnupg \
+    gosu \
     && rm -rf /var/lib/apt/lists/*
 
 # Node.js via official NodeSource script
@@ -25,6 +26,10 @@ RUN curl -fsSL https://download.docker.com/linux/debian/gpg \
 # Gemini CLI via npm
 RUN npm install -g @google/gemini-cli
 
-# Home directory accessible to any UID (initializes the volume on first run)
-RUN mkdir -p /home/user && chmod 777 /home/user
+# Home directory — initialized here so the named volume gets this directory on first mount
+RUN mkdir -p /home/user && chmod 755 /home/user
 ENV HOME=/home/user
+
+# Entrypoint creates the host user inside the container and drops privileges
+COPY entrypoint.sh /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]

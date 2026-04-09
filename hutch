@@ -23,8 +23,8 @@ usage:
   hutch shell <profile>              open an interactive shell in the profile
 
   hutch list [bases|images]          list profiles, available bases, or built images
-  hutch build <base>                 build the image for a base
-  hutch rebuild <base>               force rebuild the image (no cache)
+  hutch build <image>                build the image (e.g. hutch build claude)
+  hutch rebuild <image>              force rebuild the image (no cache)
 
   hutch new profile <name>           create a new profile and open it in the editor
   hutch new base <name>              create a new base and open it in the editor
@@ -314,14 +314,15 @@ EOF
   _open_editor "$dest"
 }
 
-_build_base() {
-  local base="$1" no_cache="${2:-}"
+_build_image() {
+  local image="$1" no_cache="${2:-}"
   local base_file
-  base_file="$(_base_file "$base")"
+  base_file="$(_base_file "default")"
   if [ ! -f "$base_file" ]; then
-    echo "Base '$base' not found: $base_file" >&2
+    echo "Base 'default' not found: $base_file" >&2
     exit 1
   fi
+  BUILD="$image"
   _export_env "_build"
   docker compose -f "$base_file" build $no_cache
 }
@@ -335,6 +336,7 @@ _export_env() {
   export HUTCH_IMAGE="hutch-${BUILD:-unknown}:latest"
   export HUTCH_WORKSPACE="$PWD"
   export HUTCH_IMAGES_DIR="$IMAGES_DIR"
+  export HUTCH_USER="$(id -un)"
   export HUTCH_UID="$(id -u)"
   export HUTCH_GID="$(id -g)"
   export HUTCH_DOCKER_GID="$(getent group docker 2>/dev/null | cut -d: -f3 || echo 999)"
@@ -445,11 +447,11 @@ case "$cmd" in
     ;;
 
   build)
-    _build_base "${2:?usage: hutch build <base>}"
+    _build_image "${2:?usage: hutch build <image>}"
     ;;
 
   rebuild)
-    _build_base "${2:?usage: hutch rebuild <base>}" "--no-cache"
+    _build_image "${2:?usage: hutch rebuild <image>}" "--no-cache"
     ;;
 
   shell)
