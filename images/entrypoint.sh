@@ -26,6 +26,9 @@ if existing_user="$(getent passwd "$UID_VAL" 2>/dev/null)"; then
         sed -i "s/^${old_user_name}:/${USERNAME}:/" /etc/passwd
         sed -i "s/\([:,]\)${old_user_name}\b/\1${USERNAME}/g" /etc/group
     fi
+    # Normalize the entry: gosu reads home from /etc/passwd, so ensure it's /home/user
+    # regardless of what the pre-existing entry had (e.g. ubuntu user has /home/ubuntu)
+    sed -i "s|^${USERNAME}:.*|${USERNAME}:x:${UID_VAL}:${GID_VAL}::/home/user:/bin/bash|" /etc/passwd
 else
     echo "${USERNAME}:x:${UID_VAL}:${GID_VAL}::/home/user:/bin/bash" >> /etc/passwd
 fi
