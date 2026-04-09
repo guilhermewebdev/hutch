@@ -247,20 +247,25 @@ _new_base() {
 services:
   main:
     build:
-      context: "\${HUTCH_IMAGES_DIR}/\${HUTCH_BUILD}"
+      context: "\${HUTCH_IMAGES_DIR}"
+      dockerfile: "\${HUTCH_BUILD}/Dockerfile"
     image: "\${HUTCH_IMAGE}"
     stdin_open: true
     tty: true
-    user: "\${HUTCH_UID}:\${HUTCH_GID}"
+    hostname: "\${HUTCH_PROFILE}"
+    labels:
+      hutch.profile: "\${HUTCH_PROFILE}"
     environment:
-      - HOME=/home/user
-    group_add:
-      - "\${HUTCH_DOCKER_GID}"
+      - HUTCH_USER
+      - HUTCH_UID
+      - HUTCH_GID
+      - HUTCH_WORKSPACE
+      - TERM
+      - COLORTERM
     volumes:
       - profile_home:/home/user
-      - "\${HUTCH_WORKSPACE}:/workspace"
-      - /var/run/docker.sock:/var/run/docker.sock
-    working_dir: /workspace
+      - "\${HUTCH_WORKSPACE}:\${HUTCH_WORKSPACE}"
+    working_dir: "\${HUTCH_WORKSPACE}"
 
 volumes:
   profile_home:
