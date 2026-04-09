@@ -9,13 +9,24 @@ UID_VAL="${HUTCH_UID:-1000}"
 GID_VAL="${HUTCH_GID:-1000}"
 DOCKER_GID="${HUTCH_DOCKER_GID:-}"
 
-# Register the user's primary group if the GID is not yet in /etc/group
-if ! getent group "$GID_VAL" &>/dev/null; then
+# Register the user's primary group — rename if GID exists under a different name
+if existing_group="$(getent group "$GID_VAL" 2>/dev/null)"; then
+    old_group_name="$(echo "$existing_group" | cut -d: -f1)"
+    if [ "$old_group_name" != "$USERNAME" ]; then
+        sed -i "s/^${old_group_name}:/${USERNAME}:/" /etc/group
+    fi
+else
     echo "${USERNAME}:x:${GID_VAL}:" >> /etc/group
 fi
 
-# Register the user in /etc/passwd if the UID is not yet present
-if ! getent passwd "$UID_VAL" &>/dev/null; then
+# Register the user — rename if UID exists under a different name
+if existing_user="$(getent passwd "$UID_VAL" 2>/dev/null)"; then
+    old_user_name="$(echo "$existing_user" | cut -d: -f1)"
+    if [ "$old_user_name" != "$USERNAME" ]; then
+        sed -i "s/^${old_user_name}:/${USERNAME}:/" /etc/passwd
+        sed -i "s/\([:,]\)${old_user_name}\b/\1${USERNAME}/g" /etc/group
+    fi
+else
     echo "${USERNAME}:x:${UID_VAL}:${GID_VAL}::/home/user:/bin/bash" >> /etc/passwd
 fi
 

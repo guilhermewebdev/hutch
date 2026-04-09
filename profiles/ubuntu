@@ -1,0 +1,3 @@
+BUILD="ubuntu"
+COMMAND="bash"
+DESCRIPTION="Ubuntu shell — isolated workspace"

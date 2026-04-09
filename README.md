@@ -147,12 +147,18 @@ hutch my-profile
 
 ## Included images
 
-| Image | Tool | Package |
+| Image | Base OS | Purpose |
 |---|---|---|
-| `claude` | Claude Code | `@anthropic-ai/claude-code` |
-| `gemini` | Google Gemini CLI | `@google/gemini-cli` |
+| `claude` | `debian:bookworm` | Claude Code CLI (`@anthropic-ai/claude-code`) |
+| `gemini` | `debian:bookworm` | Google Gemini CLI (`@google/gemini-cli`) |
+| `ubuntu` | `ubuntu:24.04` | General-purpose shell — no AI, just a clean workspace |
 
-Both images are based on `debian:bookworm` and include common development tools, Node.js, and the Docker CLI for host daemon access.
+The `ubuntu` profile opens bash directly, so `hutch ubuntu` drops you into an isolated shell with the current directory mounted. Useful for running arbitrary tools without touching your host environment.
+
+```bash
+hutch build ubuntu
+hutch ubuntu          # isolated bash shell in the current directory
+```
 
 ## Profile isolation
 
