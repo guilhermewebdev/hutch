@@ -159,6 +159,8 @@ hutch my-profile
 |---|---|---|
 | `claude` | `debian:bookworm` | Claude Code CLI (`@anthropic-ai/claude-code`) |
 | `gemini` | `debian:bookworm` | Google Gemini CLI (`@google/gemini-cli`) |
+| `aider` | `debian:bookworm` | Aider configured for DeepSeek Coder (`aider-chat`) |
+| `forge` | `debian:bookworm` | Forge AI coding agent (`@antinomyhq/forge`) |
 | `ubuntu` | `ubuntu:24.04` | General-purpose shell — no AI, just a clean workspace |
 
 The `ubuntu` profile opens bash directly, so `hutch ubuntu` drops you into an isolated shell with the current directory mounted. Useful for running arbitrary tools without touching your host environment.
@@ -166,6 +168,21 @@ The `ubuntu` profile opens bash directly, so `hutch ubuntu` drops you into an is
 ```bash
 hutch build ubuntu
 hutch ubuntu          # isolated bash shell in the current directory
+```
+
+The `aider` image runs aider pre-configured for DeepSeek Coder. Set your API key inside the container or persist it in the profile's volume:
+
+```bash
+hutch build aider
+export DEEPSEEK_API_KEY=sk-...   # or set it inside the container's ~/.bashrc
+hutch aider
+```
+
+The `forge` image runs the Forge AI coding agent:
+
+```bash
+hutch build forge
+hutch forge
 ```
 
 ## Included bases

@@ -1,0 +1,3 @@
+BUILD="forge"
+COMMAND="forge"
+DESCRIPTION="Forge – AI coding agent"

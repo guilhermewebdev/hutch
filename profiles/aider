@@ -1,0 +1,3 @@
+BUILD="aider"
+COMMAND="aider --model deepseek/deepseek-coder"
+DESCRIPTION="Aider – DeepSeek Coder"
