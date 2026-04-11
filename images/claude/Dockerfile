@@ -12,6 +12,9 @@ RUN apt-get update && apt-get install -y \
     sqlite3 file xxd bat \
     ripgrep fd-find \
     iputils-ping nmap traceroute mtr tcpdump whois iperf3 socat \
+    cmake autoconf automake pkg-config ninja-build meson \
+    podman buildah skopeo \
+    gdb strace ltrace \
     && ln -s /usr/bin/batcat /usr/local/bin/bat \
     && rm -rf /var/lib/apt/lists/*
 
@@ -47,6 +50,23 @@ RUN curl -fsSL https://packages.gitlab.com/install/repositories/gitlab/gitlab-cl
 RUN curl -fsSL "https://github.com/mikefarah/yq/releases/latest/download/yq_linux_$(dpkg --print-architecture)" \
       -o /usr/local/bin/yq \
     && chmod +x /usr/local/bin/yq
+
+# kubectl
+RUN curl -fsSL "https://dl.k8s.io/release/$(curl -fsSL https://dl.k8s.io/release/stable.txt)/bin/linux/$(dpkg --print-architecture)/kubectl" \
+      -o /usr/local/bin/kubectl \
+    && chmod +x /usr/local/bin/kubectl
+
+# Helm
+RUN curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+# Terraform
+RUN curl -fsSL https://apt.releases.hashicorp.com/gpg \
+      | gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg \
+    && echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] \
+      https://apt.releases.hashicorp.com $(. /etc/os-release && echo "$VERSION_CODENAME") main" \
+      > /etc/apt/sources.list.d/hashicorp.list \
+    && apt-get update && apt-get install -y terraform \
+    && rm -rf /var/lib/apt/lists/*
 
 # Claude Code via npm
 RUN npm install -g @anthropic-ai/claude-code
