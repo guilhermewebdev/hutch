@@ -36,6 +36,7 @@ usage:
   hutch config editor [value]        get or set the preferred editor
   hutch config                       show all configuration
 
+  hutch down <profile>               stop all containers for the profile (keeps volumes)
   hutch purge <profile>              delete the profile volume/state (keeps the profile file)
 
   hutch update                       update hutch to the latest version (preserves user files)
@@ -381,7 +382,18 @@ _run() {
   shift 2
   _check_workspace_depth
   _export_env "$profile"
-  exec docker compose -f "$base_file" run --rm main "$@"
+  docker compose -f "$base_file" run --rm main "$@"
+  local exit_code=$?
+  # Stop any lingering sidecar services (e.g. routellm, dind) without removing volumes
+  docker compose -f "$base_file" down --remove-orphans --timeout 5 2>/dev/null || true
+  return $exit_code
+}
+
+_down_profile() {
+  local profile="$1"
+  _load_profile "$profile"
+  _export_env "$profile"
+  docker compose -f "$(_base_file "$BASE")" down --remove-orphans --timeout 5
 }
 
 _exec_profile() {
@@ -526,6 +538,10 @@ case "$cmd" in
 
   update)
     _update "${2:-}"
+    ;;
+
+  down)
+    _down_profile "${2:?usage: hutch down <profile>}"
     ;;
 
   purge)

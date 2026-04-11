@@ -76,6 +76,7 @@ hutch edit image|base|profile <name>   # open an existing file in the editor
 hutch config                           # show configuration
 hutch config editor [value]            # get or set the preferred editor
 
+hutch down <profile>                   # stop all containers for the profile (keeps volumes)
 hutch purge <profile>                  # delete the profile's volume/state (keeps the profile file)
 ```
 
