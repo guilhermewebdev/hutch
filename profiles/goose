@@ -1,0 +1,4 @@
+BUILD="goose"
+BASE="default"
+COMMAND="goose session"
+DESCRIPTION="Goose – Agentic AI coding assistant"

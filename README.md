@@ -161,8 +161,9 @@ hutch my-profile
 | `claude` | `debian:bookworm` | Claude Code CLI (`@anthropic-ai/claude-code`) |
 | `gemini` | `debian:bookworm` | Google Gemini CLI (`@google/gemini-cli`) |
 | `aider` | `debian:bookworm` | Aider – DeepSeek Coder via RouteLLM (`aider-chat`) |
-| `forge` | `debian:bookworm` | Forge AI coding agent via RouteLLM (`@antinomyhq/forge`) |
-| `all` | `debian:bookworm` | All AI clients in one image — `claude`, `gemini`, `aider`, `forge` |
+| `goose` | `debian:bookworm` | Goose – Agentic AI coding assistant (`goose session`) |
+| `openhands` | `debian:bookworm` | OpenHands – Open-source AI software engineer (`openhands`) |
+| `all` | `debian:bookworm` | All AI clients in one image — `claude`, `gemini`, `aider`, `goose`, `openhands` |
 | `routellm` | `debian:bookworm` | RouteLLM server — OpenAI-compatible router (strong/weak models) |
 | `ubuntu` | `ubuntu:24.04` | General-purpose shell — no AI, just a clean workspace |
 
@@ -173,12 +174,11 @@ hutch build ubuntu
 hutch ubuntu          # isolated bash shell in the current directory
 ```
 
-The `aider` and `forge` profiles use the `routellm` base, which starts a RouteLLM sidecar as a local OpenAI-compatible router before launching the tool. Build both images first:
+The `aider` profile uses the `routellm` base, which starts a RouteLLM sidecar as a local OpenAI-compatible router before launching the tool. Build both images first:
 
 ```bash
 hutch build routellm
 hutch build aider
-hutch build forge
 ```
 
 All configuration — API keys and RouteLLM settings — lives in `~/.api_keys` inside the profile's home volume. The sidecar sources this file at startup, so credentials never pass through the host environment or the compose file.
@@ -186,7 +186,7 @@ All configuration — API keys and RouteLLM settings — lives in `~/.api_keys` 
 Create the file on the first run:
 
 ```bash
-hutch shell aider   # or hutch shell forge
+hutch shell aider
 
 # inside the container:
 cat > ~/.api_keys <<EOF
@@ -200,7 +200,7 @@ ROUTELLM_PORT=6060
 EOF
 ```
 
-On subsequent runs `hutch aider` or `hutch forge` will pick up the keys automatically. The same volume is shared between the tool container and the routellm sidecar, so a single `~/.api_keys` file configures both.
+On subsequent runs `hutch aider` will pick up the keys automatically. The same volume is shared between the tool container and the routellm sidecar, so a single `~/.api_keys` file configures both.
 
 ## Included bases
 

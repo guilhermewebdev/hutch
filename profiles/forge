@@ -1,4 +1,0 @@
-BUILD="forge"
-BASE="routellm"
-COMMAND="forge"
-DESCRIPTION="Forge – AI coding agent via RouteLLM"

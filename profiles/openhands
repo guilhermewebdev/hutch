@@ -1,0 +1,4 @@
+BUILD="openhands"
+BASE="default"
+COMMAND="openhands"
+DESCRIPTION="OpenHands – Open-source AI software engineer"

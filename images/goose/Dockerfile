@@ -18,24 +18,6 @@ RUN apt-get update && apt-get install -y \
     && ln -s /usr/bin/batcat /usr/local/bin/bat \
     && rm -rf /var/lib/apt/lists/*
 
-# Node.js via official NodeSource script
-RUN curl -fsSL https://deb.nodesource.com/setup_lts.x | bash - \
-    && apt-get install -y nodejs \
-    && rm -rf /var/lib/apt/lists/*
-
-# Docker CLI
-RUN curl -fsSL https://download.docker.com/linux/debian/gpg \
-      | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg \
-    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] \
-      https://download.docker.com/linux/debian bookworm stable" \
-      > /etc/apt/sources.list.d/docker.list \
-    && apt-get update && apt-get install -y docker-ce-cli docker-compose-plugin \
-    && rm -rf /var/lib/apt/lists/*
-
-# uv (Python package manager)
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh \
-    && ln -s /root/.local/bin/uv /usr/local/bin/uv
-
 # GitHub CLI
 RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
       | gpg --dearmor -o /usr/share/keyrings/githubcli-archive-keyring.gpg \
@@ -76,19 +58,8 @@ RUN curl -fsSL https://apt.releases.hashicorp.com/gpg \
     && apt-get update && apt-get install -y terraform \
     && rm -rf /var/lib/apt/lists/*
 
-# AI clients via npm
-RUN npm install -g \
-    @anthropic-ai/claude-code \
-    @google/gemini-cli
-
-# AI clients via pip
-RUN pip install --break-system-packages aider-chat
-
-# AI clients via install scripts
+# goose via install script
 RUN curl -fsSL https://github.com/aaif-goose/goose/releases/download/stable/download_cli.sh | bash
-
-# AI clients via uv
-RUN uv tool install openhands --python 3.12
 
 # Home directory — initialized here so the named volume gets this directory on first mount
 RUN mkdir -p /home/user && chmod 755 /home/user
