@@ -15,6 +15,7 @@ RUN apt-get update && apt-get install -y \
     cmake autoconf automake pkg-config ninja-build meson \
     podman buildah skopeo \
     gdb strace ltrace \
+    bzip2 \
     && ln -s /usr/bin/batcat /usr/local/bin/bat \
     && rm -rf /var/lib/apt/lists/*
 
@@ -58,8 +59,8 @@ RUN curl -fsSL https://apt.releases.hashicorp.com/gpg \
     && apt-get update && apt-get install -y terraform \
     && rm -rf /var/lib/apt/lists/*
 
-# goose via install script
-RUN curl -fsSL https://github.com/aaif-goose/goose/releases/download/stable/download_cli.sh | bash
+# goose via install script (skip interactive config during build)
+RUN curl -fsSL https://github.com/aaif-goose/goose/releases/download/stable/download_cli.sh | CONFIGURE=false GOOSE_BIN_DIR=/usr/local/bin bash
 
 # Home directory — initialized here so the named volume gets this directory on first mount
 RUN mkdir -p /home/user && chmod 755 /home/user

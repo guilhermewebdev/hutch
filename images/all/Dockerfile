@@ -11,10 +11,11 @@ RUN apt-get update && apt-get install -y \
     iproute2 dnsutils netcat-openbsd \
     sqlite3 file xxd bat \
     ripgrep fd-find \
-    iputils-ping nmap traceroute mtr tcpdump whois iperf3 socat \
+    iputils-ping nmap traceroute mtr tcpdump whois iperf3 iperf3 socat \
     cmake autoconf automake pkg-config ninja-build meson \
     podman buildah skopeo \
     gdb strace ltrace \
+    bzip2 \
     && ln -s /usr/bin/batcat /usr/local/bin/bat \
     && rm -rf /var/lib/apt/lists/*
 
@@ -84,8 +85,8 @@ RUN npm install -g \
 # AI clients via pip
 RUN pip install --break-system-packages aider-chat
 
-# AI clients via install scripts
-RUN curl -fsSL https://github.com/aaif-goose/goose/releases/download/stable/download_cli.sh | bash
+# AI clients via install scripts (skip interactive config during build)
+RUN curl -fsSL https://github.com/aaif-goose/goose/releases/download/stable/download_cli.sh | CONFIGURE=false GOOSE_BIN_DIR=/usr/local/bin bash
 
 # AI clients via uv
 RUN uv tool install openhands --python 3.12
