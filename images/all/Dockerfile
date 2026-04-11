@@ -89,7 +89,11 @@ RUN pip install --break-system-packages aider-chat
 RUN curl -fsSL https://github.com/aaif-goose/goose/releases/download/stable/download_cli.sh | CONFIGURE=false GOOSE_BIN_DIR=/usr/local/bin bash
 
 # AI clients via uv (install to /usr/local/bin for global access)
-RUN UV_TOOL_DIR=/usr/local/share/uv UV_TOOL_BIN_DIR=/usr/local/bin uv tool install openhands --python 3.12 \
+# We must also move the python install dir so it's not in /root
+RUN UV_PYTHON_INSTALL_DIR=/usr/local/share/uv/python \
+    UV_TOOL_DIR=/usr/local/share/uv \
+    UV_TOOL_BIN_DIR=/usr/local/bin \
+    uv tool install openhands --python 3.12 \
     && chmod -R 755 /usr/local/share/uv
 
 # Home directory — initialized here so the named volume gets this directory on first mount
