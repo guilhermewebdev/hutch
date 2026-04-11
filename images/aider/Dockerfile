@@ -28,9 +28,13 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
     && rm -rf /var/lib/apt/lists/*
 
 # GitLab CLI
-RUN curl -fsSL https://packages.gitlab.com/install/repositories/gitlab/gitlab-cli/script.deb.sh | bash \
-    && apt-get install -y glab \
-    && rm -rf /var/lib/apt/lists/*
+RUN ARCH=$(dpkg --print-architecture) \
+    && GLAB_VERSION=$(curl -fsSL "https://gitlab.com/api/v4/projects/gitlab-org%2Fcli/releases?per_page=1" \
+        | python3 -c "import sys,json; print(json.load(sys.stdin)[0]['tag_name'][1:])") \
+    && curl -fsSL "https://gitlab.com/gitlab-org/cli/-/releases/v${GLAB_VERSION}/downloads/glab_${GLAB_VERSION}_linux_${ARCH}.tar.gz" \
+        | tar -xz -C /tmp \
+    && install -m755 /tmp/bin/glab /usr/local/bin/glab \
+    && rm -rf /tmp/bin /tmp/lib /tmp/share
 
 # yq — YAML processor
 RUN curl -fsSL "https://github.com/mikefarah/yq/releases/latest/download/yq_linux_$(dpkg --print-architecture)" \
