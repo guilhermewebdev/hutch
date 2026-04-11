@@ -1,7 +1,15 @@
 #!/bin/bash
 # Starts the RouteLLM OpenAI-compatible server.
-# Override any variable via the container's environment.
+# API keys are read from ~/.api_keys in the profile home if the file exists.
+# Any variable can also be overridden via the container environment.
 set -e
+
+if [ -f "$HOME/.api_keys" ]; then
+    set -a
+    # shellcheck source=/dev/null
+    . "$HOME/.api_keys"
+    set +a
+fi
 
 ROUTELLM_STRONG_MODEL="${ROUTELLM_STRONG_MODEL:-deepseek/deepseek-chat}"
 ROUTELLM_WEAK_MODEL="${ROUTELLM_WEAK_MODEL:-deepseek/deepseek-coder}"

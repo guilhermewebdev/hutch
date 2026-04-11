@@ -5,13 +5,11 @@ services:
       dockerfile: "routellm/Dockerfile"
     image: "hutch-routellm:latest"
     environment:
-      - DEEPSEEK_API_KEY
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-placeholder}
-      - ANTHROPIC_API_KEY
-      - ROUTELLM_STRONG_MODEL
-      - ROUTELLM_WEAK_MODEL
-      - ROUTELLM_ROUTER
-      - ROUTELLM_PORT
+      - HUTCH_USER
+      - HUTCH_UID
+      - HUTCH_GID
+    volumes:
+      - profile_home:/home/user
     healthcheck:
       test: ["CMD", "curl", "-so", "/dev/null", "http://localhost:6060/v1/models"]
       interval: 3s

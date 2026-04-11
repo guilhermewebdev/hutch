@@ -173,25 +173,34 @@ hutch build ubuntu
 hutch ubuntu          # isolated bash shell in the current directory
 ```
 
-The `aider` and `forge` profiles use the `routellm` base, so they start a RouteLLM sidecar that acts as a local OpenAI-compatible router before launching the tool. Build both images first:
+The `aider` and `forge` profiles use the `routellm` base, which starts a RouteLLM sidecar as a local OpenAI-compatible router before launching the tool. Build both images first:
 
 ```bash
 hutch build routellm
 hutch build aider
 hutch build forge
-
-export DEEPSEEK_API_KEY=sk-...   # passed into the routellm sidecar
-hutch aider
-hutch forge
 ```
 
-RouteLLM routes each request to the strong or weak model based on estimated difficulty, reducing cost without sacrificing quality. The default setup routes between `deepseek/deepseek-chat` (strong) and `deepseek/deepseek-coder` (weak). Override via environment variables:
+All configuration — API keys and RouteLLM settings — lives in `~/.api_keys` inside the profile's home volume. The sidecar sources this file at startup, so credentials never pass through the host environment or the compose file.
+
+Create the file on the first run:
 
 ```bash
-export ROUTELLM_STRONG_MODEL=anthropic/claude-opus-4-5
-export ROUTELLM_WEAK_MODEL=deepseek/deepseek-coder
-hutch aider
+hutch shell aider   # or hutch shell forge
+
+# inside the container:
+cat > ~/.api_keys <<EOF
+DEEPSEEK_API_KEY=sk-...
+
+# RouteLLM routing config (optional — these are the defaults)
+ROUTELLM_STRONG_MODEL=deepseek/deepseek-chat
+ROUTELLM_WEAK_MODEL=deepseek/deepseek-coder
+ROUTELLM_ROUTER=mf
+ROUTELLM_PORT=6060
+EOF
 ```
+
+On subsequent runs `hutch aider` or `hutch forge` will pick up the keys automatically. The same volume is shared between the tool container and the routellm sidecar, so a single `~/.api_keys` file configures both.
 
 ## Included bases
 
