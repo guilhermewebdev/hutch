@@ -50,7 +50,8 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh \
     && ln -s /root/.local/bin/uv /usr/local/bin/uv
 
 # OpenHands via uv (install to /usr/local/bin for global access)
-RUN uv tool install openhands --python 3.12 --bin-dir /usr/local/bin
+RUN UV_TOOL_DIR=/usr/local/share/uv UV_TOOL_BIN_DIR=/usr/local/bin uv tool install openhands --python 3.12 \
+    && chmod -R 755 /usr/local/share/uv
 
 # Home directory — initialized here so the named volume gets this directory on first mount
 RUN mkdir -p /home/user && chmod 755 /home/user
