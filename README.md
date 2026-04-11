@@ -159,8 +159,9 @@ hutch my-profile
 |---|---|---|
 | `claude` | `debian:bookworm` | Claude Code CLI (`@anthropic-ai/claude-code`) |
 | `gemini` | `debian:bookworm` | Google Gemini CLI (`@google/gemini-cli`) |
-| `aider` | `debian:bookworm` | Aider configured for DeepSeek Coder (`aider-chat`) |
-| `forge` | `debian:bookworm` | Forge AI coding agent (`@antinomyhq/forge`) |
+| `aider` | `debian:bookworm` | Aider – DeepSeek Coder via RouteLLM (`aider-chat`) |
+| `forge` | `debian:bookworm` | Forge AI coding agent via RouteLLM (`@antinomyhq/forge`) |
+| `routellm` | `debian:bookworm` | RouteLLM server — OpenAI-compatible router (strong/weak models) |
 | `ubuntu` | `ubuntu:24.04` | General-purpose shell — no AI, just a clean workspace |
 
 The `ubuntu` profile opens bash directly, so `hutch ubuntu` drops you into an isolated shell with the current directory mounted. Useful for running arbitrary tools without touching your host environment.
@@ -170,19 +171,24 @@ hutch build ubuntu
 hutch ubuntu          # isolated bash shell in the current directory
 ```
 
-The `aider` image runs aider pre-configured for DeepSeek Coder. Set your API key inside the container or persist it in the profile's volume:
+The `aider` and `forge` profiles use the `routellm` base, so they start a RouteLLM sidecar that acts as a local OpenAI-compatible router before launching the tool. Build both images first:
 
 ```bash
+hutch build routellm
 hutch build aider
-export DEEPSEEK_API_KEY=sk-...   # or set it inside the container's ~/.bashrc
+hutch build forge
+
+export DEEPSEEK_API_KEY=sk-...   # passed into the routellm sidecar
 hutch aider
+hutch forge
 ```
 
-The `forge` image runs the Forge AI coding agent:
+RouteLLM routes each request to the strong or weak model based on estimated difficulty, reducing cost without sacrificing quality. The default setup routes between `deepseek/deepseek-chat` (strong) and `deepseek/deepseek-coder` (weak). Override via environment variables:
 
 ```bash
-hutch build forge
-hutch forge
+export ROUTELLM_STRONG_MODEL=anthropic/claude-opus-4-5
+export ROUTELLM_WEAK_MODEL=deepseek/deepseek-coder
+hutch aider
 ```
 
 ## Included bases
@@ -192,6 +198,7 @@ hutch forge
 | `default` | None | AI agents and tools that don't need Docker |
 | `docker` | Host socket (opt-in) | Running `docker`/`docker compose` from inside the container |
 | `dind` | Isolated daemon | Full Docker isolation — no host socket exposed |
+| `routellm` | None | Adds a RouteLLM sidecar — routes requests between strong/weak models |
 
 By default all profiles use `default` (no Docker access). To enable Docker CLI access, set `BASE="docker"` in your profile:
 

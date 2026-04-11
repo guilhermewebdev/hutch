@@ -1,0 +1,49 @@
+services:
+  routellm:
+    image: "hutch-routellm:latest"
+    environment:
+      - DEEPSEEK_API_KEY
+      - OPENAI_API_KEY
+      - ANTHROPIC_API_KEY
+      - ROUTELLM_STRONG_MODEL
+      - ROUTELLM_WEAK_MODEL
+      - ROUTELLM_ROUTER
+      - ROUTELLM_PORT
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:6060/v1/models"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  main:
+    build:
+      context: "${HUTCH_IMAGES_DIR}"
+      dockerfile: "${HUTCH_BUILD}/Dockerfile"
+    image: "${HUTCH_IMAGE}"
+    stdin_open: true
+    tty: true
+    hostname: "${HUTCH_PROFILE}"
+    labels:
+      hutch.profile: "${HUTCH_PROFILE}"
+    depends_on:
+      routellm:
+        condition: service_healthy
+    environment:
+      - HUTCH_USER
+      - HUTCH_UID
+      - HUTCH_GID
+      - HUTCH_DOCKER_GID
+      - HUTCH_WORKSPACE
+      - TERM
+      - COLORTERM
+      - OPENAI_BASE_URL=http://routellm:6060/v1
+      - OPENAI_API_KEY=routellm
+    volumes:
+      - profile_home:/home/user
+      - "${HUTCH_WORKSPACE}:${HUTCH_WORKSPACE}"
+    working_dir: "${HUTCH_WORKSPACE}"
+
+volumes:
+  profile_home:
+    name: "${HUTCH_PROFILE}_home"
