@@ -382,10 +382,10 @@ _run() {
   shift 2
   _check_workspace_depth
   _export_env "$profile"
-  docker compose -f "$base_file" run --rm main "$@"
+  docker compose -p "$profile" -f "$base_file" run --rm main "$@"
   local exit_code=$?
   # Stop any lingering sidecar services (e.g. routellm, dind) without removing volumes
-  docker compose -f "$base_file" down --remove-orphans --timeout 5 2>/dev/null || true
+  docker compose -p "$profile" -f "$base_file" down --remove-orphans --timeout 5 2>/dev/null || true
   return $exit_code
 }
 
@@ -393,7 +393,7 @@ _down_profile() {
   local profile="$1"
   _load_profile "$profile"
   _export_env "$profile"
-  docker compose -f "$(_base_file "$BASE")" down --remove-orphans --timeout 5
+  docker compose -p "$profile" -f "$(_base_file "$BASE")" down --remove-orphans --timeout 5
 }
 
 _exec_profile() {
