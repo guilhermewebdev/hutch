@@ -11,6 +11,7 @@ RUN apt-get update && apt-get install -y \
     iproute2 dnsutils netcat-openbsd \
     sqlite3 file xxd bat \
     ripgrep fd-find \
+    iputils-ping nmap traceroute mtr tcpdump whois iperf3 socat \
     && ln -s /usr/bin/batcat /usr/local/bin/bat \
     && rm -rf /var/lib/apt/lists/*
 
