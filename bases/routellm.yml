@@ -8,6 +8,8 @@ services:
       - HUTCH_USER
       - HUTCH_UID
       - HUTCH_GID
+      - HUTCH_DOCKER_GID
+      - HUTCH_WORKSPACE
     volumes:
       - profile_home:/home/user
     healthcheck:

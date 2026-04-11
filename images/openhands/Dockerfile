@@ -49,8 +49,8 @@ RUN ARCH=$(dpkg --print-architecture) \
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh \
     && ln -s /root/.local/bin/uv /usr/local/bin/uv
 
-# OpenHands via uv
-RUN uv tool install openhands --python 3.12
+# OpenHands via uv (install to /usr/local/bin for global access)
+RUN uv tool install openhands --python 3.12 --bin-dir /usr/local/bin
 
 # Home directory — initialized here so the named volume gets this directory on first mount
 RUN mkdir -p /home/user && chmod 755 /home/user

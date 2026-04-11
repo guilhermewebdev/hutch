@@ -88,8 +88,8 @@ RUN pip install --break-system-packages aider-chat
 # AI clients via install scripts (skip interactive config during build)
 RUN curl -fsSL https://github.com/aaif-goose/goose/releases/download/stable/download_cli.sh | CONFIGURE=false GOOSE_BIN_DIR=/usr/local/bin bash
 
-# AI clients via uv
-RUN uv tool install openhands --python 3.12
+# AI clients via uv (install to /usr/local/bin for global access)
+RUN uv tool install openhands --python 3.12 --bin-dir /usr/local/bin
 
 # Home directory — initialized here so the named volume gets this directory on first mount
 RUN mkdir -p /home/user && chmod 755 /home/user
