@@ -13,7 +13,7 @@ services:
       - ROUTELLM_ROUTER
       - ROUTELLM_PORT
     healthcheck:
-      test: ["CMD", "curl", "-sf", "http://localhost:6060/v1/models"]
+      test: ["CMD", "curl", "-so", "/dev/null", "http://localhost:6060/v1/models"]
       interval: 3s
       timeout: 5s
       retries: 20
