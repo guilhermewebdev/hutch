@@ -6,7 +6,7 @@ services:
     image: "hutch-routellm:latest"
     environment:
       - DEEPSEEK_API_KEY
-      - OPENAI_API_KEY
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-placeholder}
       - ANTHROPIC_API_KEY
       - ROUTELLM_STRONG_MODEL
       - ROUTELLM_WEAK_MODEL
