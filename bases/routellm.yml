@@ -1,5 +1,8 @@
 services:
   routellm:
+    build:
+      context: "${HUTCH_IMAGES_DIR}"
+      dockerfile: "routellm/Dockerfile"
     image: "hutch-routellm:latest"
     environment:
       - DEEPSEEK_API_KEY
