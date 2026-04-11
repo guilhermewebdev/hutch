@@ -8,7 +8,7 @@ RUN apt-get update && apt-get install -y \
 RUN pip install "routellm[serve]"
 
 # Startup script — reads model config from env vars at runtime
-COPY start.sh /start.sh
+COPY routellm/start.sh /start.sh
 RUN chmod +x /start.sh
 
 EXPOSE 6060
