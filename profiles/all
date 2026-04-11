@@ -1,0 +1,4 @@
+BUILD="all"
+BASE="default"
+COMMAND="bash"
+DESCRIPTION="All AI clients — claude, gemini, aider, forge"

@@ -161,6 +161,7 @@ hutch my-profile
 | `gemini` | `debian:bookworm` | Google Gemini CLI (`@google/gemini-cli`) |
 | `aider` | `debian:bookworm` | Aider – DeepSeek Coder via RouteLLM (`aider-chat`) |
 | `forge` | `debian:bookworm` | Forge AI coding agent via RouteLLM (`@antinomyhq/forge`) |
+| `all` | `debian:bookworm` | All AI clients in one image — `claude`, `gemini`, `aider`, `forge` |
 | `routellm` | `debian:bookworm` | RouteLLM server — OpenAI-compatible router (strong/weak models) |
 | `ubuntu` | `ubuntu:24.04` | General-purpose shell — no AI, just a clean workspace |
 
