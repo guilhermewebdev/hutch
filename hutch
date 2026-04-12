@@ -369,6 +369,17 @@ _service_up() {
   _load_profile "$profile"
   _export_env "$profile"
   _build_service_args
+  
+  # Ensure the requested service file is included even if not in the profile.
+  # This allows testing a service before permanently adding it to the profile.
+  local found=0
+  for f in "${SERVICE_ARGS[@]}"; do
+    if [ "$f" = "$svc_file" ]; then found=1; break; fi
+  done
+  if [ "$found" -eq 0 ]; then
+    SERVICE_ARGS+=("-f" "$svc_file")
+  fi
+  
   docker compose -p "$profile" -f "$(_base_file "$BASE")" "${SERVICE_ARGS[@]}" up -d "$service"
 }
 
@@ -381,6 +392,16 @@ _service_down() {
   _load_profile "$profile"
   _export_env "$profile"
   _build_service_args
+
+  # Ensure the requested service file is included even if not in the profile.
+  local found=0
+  for f in "${SERVICE_ARGS[@]}"; do
+    if [ "$f" = "$svc_file" ]; then found=1; break; fi
+  done
+  if [ "$found" -eq 0 ]; then
+    SERVICE_ARGS+=("-f" "$svc_file")
+  fi
+
   docker compose -p "$profile" -f "$(_base_file "$BASE")" "${SERVICE_ARGS[@]}" stop "$service"
 }
 
