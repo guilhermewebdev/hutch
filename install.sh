@@ -30,28 +30,35 @@ ln -sf "$SCRIPT_DIR/hutch" "$BIN_DIR/hutch"
 chmod +x "$SCRIPT_DIR/hutch"
 echo "✓ Command 'hutch' installed at $BIN_DIR/hutch"
 
-# Create profiles directory
+# Create config directories
 mkdir -p "$PROFILES_DIR"
-echo "✓ Profiles directory: $PROFILES_DIR"
+mkdir -p "$PROFILES_DIR/services"
+echo "✓ Config directory: $PROFILES_DIR"
 
-# Copy default profiles.
-# Profiles marked with "# hutch-managed" (structural profiles tied to images)
-# are always overwritten so updates propagate. Unmarked profiles (work, personal,
-# user-created) are only created on first install and never touched again.
-for example in "$SCRIPT_DIR/profiles/"*; do
-  [ -f "$example" ] || continue
-  name="$(basename "$example")"
-  dest="$PROFILES_DIR/$name"
-  if [ ! -f "$dest" ]; then
-    cp "$example" "$dest"
-    echo "  + Profile created: $dest"
-  elif head -1 "$example" | grep -q "^# hutch-managed"; then
-    cp "$example" "$dest"
-    echo "  ↺ Profile updated:  $dest"
-  else
-    echo "  ~ Profile kept:     $dest"
-  fi
-done
+# Copy files from a source dir to a dest dir.
+# Files marked "# hutch-managed" are always overwritten (updates propagate).
+# Unmarked files are only created on first install and never touched again.
+_install_files() {
+  local src_dir="$1" dest_dir="$2" label="$3"
+  for src in "$src_dir/"*; do
+    [ -f "$src" ] || continue
+    local name dest
+    name="$(basename "$src")"
+    dest="$dest_dir/$name"
+    if [ ! -f "$dest" ]; then
+      cp "$src" "$dest"
+      echo "  + $label created: $dest"
+    elif head -1 "$src" | grep -q "^# hutch-managed"; then
+      cp "$src" "$dest"
+      echo "  ↺ $label updated:  $dest"
+    else
+      echo "  ~ $label kept:     $dest"
+    fi
+  done
+}
+
+_install_files "$SCRIPT_DIR/profiles" "$PROFILES_DIR"          "Profile"
+_install_files "$SCRIPT_DIR/services" "$PROFILES_DIR/services" "Service"
 
 echo ""
 

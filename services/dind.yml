@@ -1,3 +1,4 @@
+# hutch-managed
 # Docker-in-Docker service
 #
 # Runs an isolated Docker daemon inside the profile — full Docker access
