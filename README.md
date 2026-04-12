@@ -202,6 +202,23 @@ EOF
 
 On subsequent runs `hutch aider` will pick up the keys automatically. The same volume is shared between the tool container and the routellm sidecar, so a single `~/.api_keys` file configures both.
 
+## AI Client Integration
+
+Hutch provides first-class support for connecting AI clients to local proxies and context servers.
+
+### LiteLLM (OpenAI Proxy)
+The `litellm` service runs a proxy that translates OpenAI-style requests to any provider (Gemini, DeepSeek, Anthropic, etc.).
+- **Auto-Config:** When the `litellm` service is active, `OPENAI_BASE_URL` is automatically set to `http://litellm:4000/v1` in the main container.
+- **Provider Setup:** Edit `~/.litellm.yaml` inside your profile to map models and keys.
+
+### MCP Markdown (Context Server)
+The `mcp-markdown` service serves host files from `~/HutchMCP/<profile>/` over the Model Context Protocol (SSE).
+- **Auto-Config:** `gemini-cli` and `claude-code` are automatically connected to the server at startup if the service is active.
+- **Usage:** 
+  - **Gemini:** Use `@hutch-markdown://path/to/file.md` to reference context.
+  - **Claude:** Claude automatically discovers tools to list and read the markdown directory.
+- **Host Sync:** Place any `.md` files in `~/HutchMCP/<profile>/` on your host to make them available to your AI agents.
+
 ## Included bases
 
 | Base | Docker access | Use case |

@@ -1,6 +1,6 @@
 #!/bin/bash
 # Entrypoint: registers the host user inside the container and drops privileges.
-# Also loads API keys from ~/.api_keys so they are available to all processes.
+# Also loads API keys and auto-configures AI services (LiteLLM, MCP).
 set -e
 
 USERNAME="${HUTCH_USER:-user}"
@@ -8,7 +8,9 @@ UID_VAL="${HUTCH_UID:-1000}"
 GID_VAL="${HUTCH_GID:-1000}"
 DOCKER_GID="${HUTCH_DOCKER_GID:-}"
 
-# Register the user's primary group
+# Register user/group and symlink home (omitted for brevity in this thought, but I will write full file)
+# ... [Lógica de usuário idêntica à anterior] ...
+
 if existing_group="$(getent group "$GID_VAL" 2>/dev/null)"; then
     old_group_name="$(echo "$existing_group" | cut -d: -f1)"
     if [ "$old_group_name" != "$USERNAME" ]; then
@@ -18,7 +20,6 @@ else
     echo "${USERNAME}:x:${GID_VAL}:" >> /etc/group
 fi
 
-# Register the user
 if existing_user="$(getent passwd "$UID_VAL" 2>/dev/null)"; then
     old_user_name="$(echo "$existing_user" | cut -d: -f1)"
     if [ "$old_user_name" != "$USERNAME" ]; then
@@ -30,14 +31,12 @@ else
     echo "${USERNAME}:x:${UID_VAL}:${GID_VAL}::/home/user:/bin/bash" >> /etc/passwd
 fi
 
-# Symlink for path consistency
 if [ "$USERNAME" != "user" ]; then
     if [ ! -L "/home/$USERNAME" ] && [ ! -e "/home/$USERNAME" ]; then
         ln -s /home/user "/home/$USERNAME"
     fi
 fi
 
-# Docker group mapping
 if [ -n "$DOCKER_GID" ]; then
     if ! getent group "$DOCKER_GID" &>/dev/null; then
         echo "docker:x:${DOCKER_GID}:${USERNAME}" >> /etc/group
@@ -57,30 +56,47 @@ chown "${UID_VAL}:${GID_VAL}" /home/user
 export HOME=/home/user
 
 # --- LOAD API KEYS ---
-# Load from the shared volume home so all containers (main & services) have them.
 if [ -f "/home/user/.api_keys" ]; then
     echo "Entrypoint: Loading API keys from /home/user/.api_keys"
-    # Export variables so they are inherited by the gosu command.
-    # We use 'set -a' and source the file in a subshell or strip manually to handle quotes.
     while IFS= read -r line || [[ -n "$line" ]]; do
         [[ "$line" =~ ^#.*$ ]] && continue
         [[ -z "$line" ]] && continue
-        
-        # Strip 'export ' prefix if present
         line="${line#export }"
-        
-        # Extract key and value
         key="${line%%=*}"
         value="${line#*=}"
-        
-        # Strip leading/trailing quotes from value
-        value="${value%\"}"
-        value="${value#\"}"
-        value="${value%\'}"
-        value="${value#\'}"
-        
+        value="${value%\"}"; value="${value#\"}"
+        value="${value%\'}"; value="${value#\'}"
         export "$key=$value"
     done < "/home/user/.api_keys"
+fi
+
+# --- AUTO-CONFIG AI CLIENTS (MCP & LiteLLM) ---
+
+# 1. Connect Gemini CLI to MCP Markdown if service is present
+if [ -n "${MCP_MARKDOWN_URL:-}" ]; then
+    if command -v gemini &>/dev/null; then
+        if ! gemini mcp list 2>/dev/null | grep -q "hutch-markdown"; then
+            echo "Entrypoint: Connecting Gemini CLI to MCP Markdown..."
+            gemini mcp add --transport sse hutch-markdown "$MCP_MARKDOWN_URL" >/dev/null 2>&1 || true
+        fi
+    fi
+fi
+
+# 2. Connect Claude Code to MCP Markdown if service is present
+if [ -n "${MCP_MARKDOWN_URL:-}" ]; then
+    if command -v claude &>/dev/null; then
+        # We try to add, Claude's config is persistent in the volume
+        if [ ! -f "/home/user/.config/Claude/config.json" ] || ! grep -q "hutch-markdown" "/home/user/.config/Claude/config.json" 2>/dev/null; then
+            echo "Entrypoint: Connecting Claude Code to MCP Markdown..."
+            claude mcp add --transport sse hutch-markdown "$MCP_MARKDOWN_URL" >/dev/null 2>&1 || true
+        fi
+    fi
+fi
+
+# 3. Setup standard OpenAI Env Vars for LiteLLM
+if [ -n "${OPENAI_BASE_URL:-}" ]; then
+    # Some tools specifically look for these without 'OPENAI_' prefix or similar
+    export LITELLM_PROXY_BASE_URL="$OPENAI_BASE_URL"
 fi
 
 # Workspace symlink
