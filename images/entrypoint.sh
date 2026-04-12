@@ -128,59 +128,65 @@ fi
 # 1. Connect Gemini CLI to MCP File System if service is present
 if [ -n "${MCP_FILES_URL:-}" ]; then
     if command -v gemini &>/dev/null; then
-        if ! gemini mcp list 2>/dev/null | grep -q "hutch-files"; then
-            echo "Entrypoint: Connecting Gemini CLI to MCP File System..."
-            gemini mcp add --transport sse hutch-files "$MCP_FILES_URL" >/dev/null 2>&1 || true
-        fi
+        echo "Entrypoint: Connecting Gemini CLI to MCP File System..."
+        gosu "$USERNAME" bash -c "mkdir -p /home/user/.config/gemini-cli && \
+        if [ ! -f /home/user/.config/gemini-cli/config.json ]; then \
+            echo '{\"mcpServers\": {}}' > /home/user/.config/gemini-cli/config.json; \
+        fi && \
+        if ! grep -q 'hutch-files' /home/user/.config/gemini-cli/config.json 2>/dev/null; then \
+            tmp=\$(mktemp) && \
+            jq --arg url \"\$MCP_FILES_URL\" '.mcpServers[\"hutch-files\"] = {\"type\": \"sse\", \"url\": \$url}' /home/user/.config/gemini-cli/config.json > \"\$tmp\" && mv \"\$tmp\" /home/user/.config/gemini-cli/config.json; \
+        fi"
     fi
 fi
+
 
 # 2. Connect Claude Code to MCP File System if service is present
 if [ -n "${MCP_FILES_URL:-}" ]; then
     if command -v claude &>/dev/null; then
-        # We try to add, Claude's config is persistent in the volume
-        if [ ! -f "/home/user/.config/Claude/config.json" ] || ! grep -q "hutch-files" "/home/user/.config/Claude/config.json" 2>/dev/null; then
-            echo "Entrypoint: Connecting Claude Code to MCP File System..."
-            claude mcp add --transport sse hutch-files "$MCP_FILES_URL" >/dev/null 2>&1 || true
-        fi
+        echo "Entrypoint: Connecting Claude Code to MCP File System..."
+        gosu "$USERNAME" bash -c "mkdir -p ~/.claude && \
+        if [ ! -f ~/.claude/settings.json ]; then \
+            echo '{\"\$schema\": \"https://claude.ai/schema/settings.json\", \"mcpServers\": {}}' > ~/.claude/settings.json; \
+        fi && \
+        if ! grep -q 'hutch-files' ~/.claude/settings.json 2>/dev/null; then \
+            tmp=\$(mktemp) && \
+            jq --arg url \"\$MCP_FILES_URL\" '.mcpServers[\"hutch-files\"] = {\"type\": \"sse\", \"url\": \$url}' ~/.claude/settings.json > \"\$tmp\" && mv \"\$tmp\" ~/.claude/settings.json; \
+        fi"
     fi
 fi
 
 # 3. Connect Goose to MCP File System if service is present
 if [ -n "${MCP_FILES_URL:-}" ]; then
     if command -v goose &>/dev/null; then
-        GOOSE_CONFIG="/home/user/.config/goose/config.yaml"
-        mkdir -p "/home/user/.config/goose"
-        if [ ! -f "$GOOSE_CONFIG" ] || ! grep -q "hutch-files" "$GOOSE_CONFIG" 2>/dev/null; then
-            echo "Entrypoint: Connecting Goose to MCP File System..."
-            # Simple YAML append for the extension
-            cat >> "$GOOSE_CONFIG" <<EOF
+        echo "Entrypoint: Connecting Goose to MCP File System..."
+        gosu "$USERNAME" bash -c "mkdir -p /home/user/.config/goose && \
+        if [ ! -f /home/user/.config/goose/config.yaml ] || ! grep -q 'hutch-files' /home/user/.config/goose/config.yaml 2>/dev/null; then \
+            cat >> /home/user/.config/goose/config.yaml <<EOF
 extensions:
   hutch-files:
     type: sse
-    url: "$MCP_FILES_URL"
+    url: \"\$MCP_FILES_URL\"
 EOF
-        fi
+        fi"
     fi
 fi
 
 # 4. Connect OpenHands to MCP File System if service is present
 if [ -n "${MCP_FILES_URL:-}" ]; then
-    # OpenHands uses a JSON config for MCP
-    OH_MCP_CONFIG="/home/user/.openhands/mcp.json"
-    mkdir -p "/home/user/.openhands"
-    if [ ! -f "$OH_MCP_CONFIG" ] || ! grep -q "hutch-files" "$OH_MCP_CONFIG" 2>/dev/null; then
-        echo "Entrypoint: Connecting OpenHands to MCP File System..."
-        cat > "$OH_MCP_CONFIG" <<EOF
+    echo "Entrypoint: Connecting OpenHands to MCP File System..."
+    gosu "$USERNAME" bash -c "mkdir -p /home/user/.openhands && \
+    if [ ! -f /home/user/.openhands/mcp.json ] || ! grep -q 'hutch-files' /home/user/.openhands/mcp.json 2>/dev/null; then \
+        cat > /home/user/.openhands/mcp.json <<EOF
 {
-  "mcpServers": {
-    "hutch-files": {
-      "url": "$MCP_FILES_URL"
+  \"mcpServers\": {
+    \"hutch-files\": {
+      \"url\": \"\$MCP_FILES_URL\"
     }
   }
 }
 EOF
-    fi
+    fi"
 fi
 
 # 5. Setup standard OpenAI Env Vars for LiteLLM
