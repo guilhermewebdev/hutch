@@ -32,5 +32,4 @@ services:
     environment:
       - MCP_FILES_URL=http://mcp-files:3000/sse
     depends_on:
-      mcp-files:
-        condition: service_healthy
+      - mcp-files

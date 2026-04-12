@@ -30,8 +30,7 @@ services:
     volumes:
       - dind_certs:/certs/client:ro
     depends_on:
-      dind:
-        condition: service_healthy
+      - dind
 
 volumes:
   profile_home:

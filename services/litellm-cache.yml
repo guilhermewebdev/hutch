@@ -23,5 +23,4 @@ services:
       - REDIS_HOST=litellm-cache
       - REDIS_PORT=6379
     depends_on:
-      litellm-cache:
-        condition: service_healthy
+      - litellm-cache

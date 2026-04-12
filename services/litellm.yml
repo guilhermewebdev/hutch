@@ -46,8 +46,7 @@ services:
       # LiteLLM specific
       - LITELLM_PROXY_BASE_URL=http://litellm:4000/v1
     depends_on:
-      litellm:
-        condition: service_healthy
+      - litellm
 
 volumes:
   profile_home:
