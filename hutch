@@ -540,7 +540,13 @@ _run() {
   _build_service_args
   docker compose -p "$profile" -f "$base_file" "${SERVICE_ARGS[@]}" run --rm main "$@"
   local exit_code=$?
-  docker compose -p "$profile" -f "$base_file" "${SERVICE_ARGS[@]}" down --remove-orphans --timeout 5 2>/dev/null || true
+
+  # Only down if no other 'main' containers for this profile are running.
+  # This allows multiple shells for the same profile to coexist.
+  if [ -z "$(docker ps -q --filter "label=com.docker.compose.project=$profile" --filter "label=com.docker.compose.service=main")" ]; then
+    docker compose -p "$profile" -f "$base_file" "${SERVICE_ARGS[@]}" down --remove-orphans --timeout 5 2>/dev/null || true
+  fi
+
   return $exit_code
 }
 
