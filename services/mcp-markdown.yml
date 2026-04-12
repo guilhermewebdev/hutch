@@ -13,6 +13,9 @@
 
 services:
   mcp-markdown:
+    build:
+      context: "${HUTCH_IMAGES_DIR}"
+      dockerfile: "mcp-markdown/Dockerfile"
     image: "hutch-mcp-markdown:latest"
     labels:
       hutch.service: "mcp-markdown"

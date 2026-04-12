@@ -12,6 +12,9 @@
 
 services:
   litellm:
+    build:
+      context: "${HUTCH_IMAGES_DIR}"
+      dockerfile: "litellm/Dockerfile"
     image: "hutch-litellm:latest"
     labels:
       hutch.service: "litellm"
