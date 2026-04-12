@@ -9,8 +9,10 @@
 # To use: add SERVICES="litellm litellm-db" to your profile.
 
 services:
-  postgres:
+  litellm-db:
     image: postgres:16-alpine
+    labels:
+      hutch.service: "litellm-db"
     environment:
       POSTGRES_DB: litellm
       POSTGRES_USER: litellm
@@ -25,10 +27,10 @@ services:
 
   litellm:
     environment:
-      - DATABASE_URL=postgresql://litellm:litellm_password@postgres:5432/litellm
+      - DATABASE_URL=postgresql://litellm:litellm_password@litellm-db:5432/litellm
       - LITELLM_MASTER_KEY=sk-hutch-master-key # Default master key for the UI
     depends_on:
-      postgres:
+      litellm-db:
         condition: service_healthy
 
 volumes:

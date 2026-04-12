@@ -8,8 +8,10 @@
 # To use: add SERVICES="litellm litellm-cache" to your profile.
 
 services:
-  redis:
+  litellm-cache:
     image: redis:alpine
+    labels:
+      hutch.service: "litellm-cache"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -18,8 +20,8 @@ services:
 
   litellm:
     environment:
-      - REDIS_HOST=redis
+      - REDIS_HOST=litellm-cache
       - REDIS_PORT=6379
     depends_on:
-      redis:
+      litellm-cache:
         condition: service_healthy
