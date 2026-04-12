@@ -368,7 +368,8 @@ _service_up() {
   [ -f "$svc_file" ] || { echo "Service '$service' not found: $svc_file" >&2; exit 1; }
   _load_profile "$profile"
   _export_env "$profile"
-  docker compose -p "$profile" -f "$(_base_file "$BASE")" -f "$svc_file" up -d "$service"
+  _build_service_args
+  docker compose -p "$profile" -f "$(_base_file "$BASE")" "${SERVICE_ARGS[@]}" up -d "$service"
 }
 
 _service_down() {
@@ -379,7 +380,8 @@ _service_down() {
   [ -f "$svc_file" ] || { echo "Service '$service' not found: $svc_file" >&2; exit 1; }
   _load_profile "$profile"
   _export_env "$profile"
-  docker compose -p "$profile" -f "$(_base_file "$BASE")" -f "$svc_file" stop "$service"
+  _build_service_args
+  docker compose -p "$profile" -f "$(_base_file "$BASE")" "${SERVICE_ARGS[@]}" stop "$service"
 }
 
 _service_list() {
