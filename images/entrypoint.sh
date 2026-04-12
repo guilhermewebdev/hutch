@@ -72,23 +72,23 @@ fi
 
 # --- AUTO-CONFIG AI CLIENTS (MCP & LiteLLM) ---
 
-# 1. Connect Gemini CLI to MCP Markdown if service is present
-if [ -n "${MCP_MARKDOWN_URL:-}" ]; then
+# 1. Connect Gemini CLI to MCP File System if service is present
+if [ -n "${MCP_FILES_URL:-}" ]; then
     if command -v gemini &>/dev/null; then
-        if ! gemini mcp list 2>/dev/null | grep -q "hutch-markdown"; then
-            echo "Entrypoint: Connecting Gemini CLI to MCP Markdown..."
-            gemini mcp add --transport sse hutch-markdown "$MCP_MARKDOWN_URL" >/dev/null 2>&1 || true
+        if ! gemini mcp list 2>/dev/null | grep -q "hutch-files"; then
+            echo "Entrypoint: Connecting Gemini CLI to MCP File System..."
+            gemini mcp add --transport sse hutch-files "$MCP_FILES_URL" >/dev/null 2>&1 || true
         fi
     fi
 fi
 
-# 2. Connect Claude Code to MCP Markdown if service is present
-if [ -n "${MCP_MARKDOWN_URL:-}" ]; then
+# 2. Connect Claude Code to MCP File System if service is present
+if [ -n "${MCP_FILES_URL:-}" ]; then
     if command -v claude &>/dev/null; then
         # We try to add, Claude's config is persistent in the volume
-        if [ ! -f "/home/user/.config/Claude/config.json" ] || ! grep -q "hutch-markdown" "/home/user/.config/Claude/config.json" 2>/dev/null; then
-            echo "Entrypoint: Connecting Claude Code to MCP Markdown..."
-            claude mcp add --transport sse hutch-markdown "$MCP_MARKDOWN_URL" >/dev/null 2>&1 || true
+        if [ ! -f "/home/user/.config/Claude/config.json" ] || ! grep -q "hutch-files" "/home/user/.config/Claude/config.json" 2>/dev/null; then
+            echo "Entrypoint: Connecting Claude Code to MCP File System..."
+            claude mcp add --transport sse hutch-files "$MCP_FILES_URL" >/dev/null 2>&1 || true
         fi
     fi
 fi
