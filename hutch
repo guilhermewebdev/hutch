@@ -149,6 +149,21 @@ _load_profile() {
   # shellcheck source=/dev/null
   source "$config"
   BASE="${BASE:-default}"
+
+  # Detect bases that were migrated to services and guide the user.
+  local base_file="$BASES_DIR/$BASE.yml"
+  if [ ! -f "$base_file" ]; then
+    echo "Error: profile '$profile' references base '$BASE', which no longer exists." >&2
+    if [ -f "$SERVICES_DIR/$BASE.yml" ]; then
+      echo "" >&2
+      echo "  '$BASE' is now a service. Update $PROFILES_DIR/$profile:" >&2
+      echo "    BASE=\"default\"" >&2
+      echo "    SERVICES=\"$BASE\"" >&2
+      echo "" >&2
+      echo "  Or run: hutch update   (managed profiles are updated automatically)" >&2
+    fi
+    exit 1
+  fi
 }
 
 _list_profiles() {

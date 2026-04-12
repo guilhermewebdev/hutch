@@ -34,7 +34,10 @@ echo "✓ Command 'hutch' installed at $BIN_DIR/hutch"
 mkdir -p "$PROFILES_DIR"
 echo "✓ Profiles directory: $PROFILES_DIR"
 
-# Copy default profiles if they don't exist yet
+# Copy default profiles.
+# Profiles marked with "# hutch-managed" (structural profiles tied to images)
+# are always overwritten so updates propagate. Unmarked profiles (work, personal,
+# user-created) are only created on first install and never touched again.
 for example in "$SCRIPT_DIR/profiles/"*; do
   [ -f "$example" ] || continue
   name="$(basename "$example")"
@@ -42,8 +45,11 @@ for example in "$SCRIPT_DIR/profiles/"*; do
   if [ ! -f "$dest" ]; then
     cp "$example" "$dest"
     echo "  + Profile created: $dest"
+  elif head -1 "$example" | grep -q "^# hutch-managed"; then
+    cp "$example" "$dest"
+    echo "  ↺ Profile updated:  $dest"
   else
-    echo "  ~ Profile already exists (kept): $dest"
+    echo "  ~ Profile kept:     $dest"
   fi
 done
 
@@ -66,7 +72,8 @@ echo "  Build an image:  hutch build claude"
 echo "  Run:             hutch <profile>"
 echo ""
 echo "To create new environments:"
-echo "  hutch new image <name>   create a Dockerfile"
-echo "  hutch new base <name>    create a docker-compose base"
+echo "  hutch new image <name>     create a Dockerfile"
+echo "  hutch new base <name>      create a docker-compose base"
+echo "  hutch new service <name>   create a service sidecar"
 echo ""
 echo "Edit profiles in $PROFILES_DIR to customize."

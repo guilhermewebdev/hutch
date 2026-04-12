@@ -1,3 +1,4 @@
+# hutch-managed
 BUILD="all"
 BASE="default"
 COMMAND="bash"

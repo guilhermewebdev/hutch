@@ -1,3 +1,4 @@
+# hutch-managed
 BUILD="gemini"
 COMMAND="gemini"
 DESCRIPTION="Google Gemini CLI"

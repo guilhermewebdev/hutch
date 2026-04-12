@@ -1,3 +1,4 @@
+# hutch-managed
 BUILD="claude"
 BASE="default"
 SERVICES="dind"

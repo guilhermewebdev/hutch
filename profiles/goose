@@ -1,3 +1,4 @@
+# hutch-managed
 BUILD="goose"
 BASE="default"
 COMMAND="goose session"
