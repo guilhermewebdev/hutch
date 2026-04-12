@@ -211,6 +211,19 @@ The `litellm` service runs a proxy that translates OpenAI-style requests to any 
 - **Auto-Config:** When the `litellm` service is active, `OPENAI_BASE_URL` is automatically set to `http://litellm:4000/v1` in the main container.
 - **Provider Setup:** Edit `~/.litellm.yaml` inside your profile to map models and keys.
 
+#### Enhancements (Optional):
+You can stack multiple LiteLLM services to enable advanced features:
+- **`litellm-db`**: Adds a PostgreSQL database to enable the **Admin UI (Dashboard)**, **Virtual Keys**, and **Usage Tracking**.
+  - Dashboard available at `http://litellm:4000/` (internally).
+  - Configures `LITELLM_MASTER_KEY=sk-hutch-master-key`.
+- **`litellm-cache`**: Adds Redis to enable **Response Caching**. Saves tokens and reduces latency for repeated prompts.
+
+**Usage:**
+```bash
+# ~/.config/hutch/my-profile
+SERVICES="litellm litellm-db litellm-cache"
+```
+
 ### MCP File System (Context Server)
 The `mcp-files` service serves host files from `~/HutchMCP/<profile>/` over the Model Context Protocol (SSE).
 - **Auto-Config:** `gemini-cli` and `claude-code` are automatically connected to the server at startup if the service is active.

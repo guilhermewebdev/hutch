@@ -1,8 +1,8 @@
 FROM python:3.12-slim
 
-RUN apt-get update && apt-get install -y curl gosu && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y curl gosu libatomic1 && rm -rf /var/lib/apt/lists/*
 
-RUN pip install "litellm[proxy]"
+RUN pip install "litellm[proxy]" prisma
 
 RUN mkdir -p /home/user && chmod 755 /home/user
 ENV HOME=/home/user
