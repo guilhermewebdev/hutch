@@ -105,7 +105,8 @@ router_settings:
 EOF
 fi
 
-chown "${UID_VAL}:${GID_VAL}" /home/user/.api_keys /home/user/.litellm.yaml
+# Fix permissions for all generated configs
+chown -R "${UID_VAL}:${GID_VAL}" /home/user/.api_keys /home/user/.litellm.yaml /home/user/.config /home/user/.openhands 2>/dev/null || true
 
 # --- LOAD API KEYS ---
 if [ -f "/home/user/.api_keys" ]; then
@@ -145,7 +146,44 @@ if [ -n "${MCP_FILES_URL:-}" ]; then
     fi
 fi
 
-# 3. Setup standard OpenAI Env Vars for LiteLLM
+# 3. Connect Goose to MCP File System if service is present
+if [ -n "${MCP_FILES_URL:-}" ]; then
+    if command -v goose &>/dev/null; then
+        GOOSE_CONFIG="/home/user/.config/goose/config.yaml"
+        mkdir -p "/home/user/.config/goose"
+        if [ ! -f "$GOOSE_CONFIG" ] || ! grep -q "hutch-files" "$GOOSE_CONFIG" 2>/dev/null; then
+            echo "Entrypoint: Connecting Goose to MCP File System..."
+            # Simple YAML append for the extension
+            cat >> "$GOOSE_CONFIG" <<EOF
+extensions:
+  hutch-files:
+    type: sse
+    url: "$MCP_FILES_URL"
+EOF
+        fi
+    fi
+fi
+
+# 4. Connect OpenHands to MCP File System if service is present
+if [ -n "${MCP_FILES_URL:-}" ]; then
+    # OpenHands uses a JSON config for MCP
+    OH_MCP_CONFIG="/home/user/.openhands/mcp.json"
+    mkdir -p "/home/user/.openhands"
+    if [ ! -f "$OH_MCP_CONFIG" ] || ! grep -q "hutch-files" "$OH_MCP_CONFIG" 2>/dev/null; then
+        echo "Entrypoint: Connecting OpenHands to MCP File System..."
+        cat > "$OH_MCP_CONFIG" <<EOF
+{
+  "mcpServers": {
+    "hutch-files": {
+      "url": "$MCP_FILES_URL"
+    }
+  }
+}
+EOF
+    fi
+fi
+
+# 5. Setup standard OpenAI Env Vars for LiteLLM
 if [ -n "${OPENAI_BASE_URL:-}" ]; then
     # Some tools specifically look for these without 'OPENAI_' prefix or similar
     export LITELLM_PROXY_BASE_URL="$OPENAI_BASE_URL"
