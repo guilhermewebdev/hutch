@@ -60,13 +60,26 @@ export HOME=/home/user
 # Load from the shared volume home so all containers (main & services) have them.
 if [ -f "/home/user/.api_keys" ]; then
     echo "Entrypoint: Loading API keys from /home/user/.api_keys"
-    # Export variables so they are inherited by the gosu command
+    # Export variables so they are inherited by the gosu command.
+    # We use 'set -a' and source the file in a subshell or strip manually to handle quotes.
     while IFS= read -r line || [[ -n "$line" ]]; do
         [[ "$line" =~ ^#.*$ ]] && continue
         [[ -z "$line" ]] && continue
-        # Strip 'export ' prefix if user added it, to be robust
-        trimmed_line="${line#export }"
-        export "$trimmed_line"
+        
+        # Strip 'export ' prefix if present
+        line="${line#export }"
+        
+        # Extract key and value
+        key="${line%%=*}"
+        value="${line#*=}"
+        
+        # Strip leading/trailing quotes from value
+        value="${value%\"}"
+        value="${value#\"}"
+        value="${value%\'}"
+        value="${value#\'}"
+        
+        export "$key=$value"
     done < "/home/user/.api_keys"
 fi
 
