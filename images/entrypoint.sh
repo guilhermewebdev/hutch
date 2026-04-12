@@ -52,8 +52,60 @@ if [ -n "$DOCKER_GID" ]; then
     fi
 fi
 
-chown "${UID_VAL}:${GID_VAL}" /home/user
-export HOME=/home/user
+# --- INITIALIZE CONFIG TEMPLATES ---
+
+# 1. Create .api_keys template if missing
+if [ ! -f "/home/user/.api_keys" ]; then
+    echo "Entrypoint: Creating API keys template in /home/user/.api_keys"
+    cat > "/home/user/.api_keys" <<EOF
+# Hutch API Keys Template
+# Fill in your keys and restart the profile.
+
+OPENAI_API_KEY=
+ANTHROPIC_API_KEY=
+DEEPSEEK_API_KEY=
+GOOGLE_API_KEY=
+EOF
+fi
+
+# 2. Create .litellm.yaml template if missing
+if [ ! -f "/home/user/.litellm.yaml" ]; then
+    echo "Entrypoint: Creating LiteLLM config template in /home/user/.litellm.yaml"
+    cat > "/home/user/.litellm.yaml" <<EOF
+model_list:
+  - model_name: strong
+    litellm_params:
+      model: gemini/gemini-1.5-pro
+      api_key: os.environ/GOOGLE_API_KEY
+      gemini_api_version: v1beta
+
+  - model_name: strong
+    litellm_params:
+      model: deepseek/deepseek-chat
+      api_key: os.environ/DEEPSEEK_API_KEY
+      api_base: https://api.deepseek.com/v1
+
+  - model_name: weak
+    litellm_params:
+      model: gemini/gemini-1.5-flash
+      api_key: os.environ/GOOGLE_API_KEY
+      gemini_api_version: v1beta
+
+  - model_name: weak
+    litellm_params:
+      model: deepseek/deepseek-coder
+      api_key: os.environ/DEEPSEEK_API_KEY
+      api_base: https://api.deepseek.com/v1
+
+router_settings:
+  num_retries: 3
+  retry_after_429: true
+  fallbacks: [{"strong": ["weak"]}, {"weak": ["strong"]}]
+  routing_strategy: "latency-based-routing"
+EOF
+fi
+
+chown "${UID_VAL}:${GID_VAL}" /home/user/.api_keys /home/user/.litellm.yaml
 
 # --- LOAD API KEYS ---
 if [ -f "/home/user/.api_keys" ]; then
