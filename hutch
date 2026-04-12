@@ -380,7 +380,7 @@ _service_up() {
     SERVICE_ARGS+=("-f" "$svc_file")
   fi
   
-  docker compose -p "$profile" -f "$(_base_file "$BASE")" "${SERVICE_ARGS[@]}" up -d "$service"
+  docker compose -p "$profile" -f "$(_base_file "$BASE")" "${SERVICE_ARGS[@]}" up -d --remove-orphans "$service"
 }
 
 _service_down() {
@@ -561,7 +561,7 @@ _run() {
   _check_workspace_depth
   _export_env "$profile"
   _build_service_args
-  docker compose -p "$profile" -f "$base_file" "${SERVICE_ARGS[@]}" run --rm main "$@"
+  docker compose -p "$profile" -f "$base_file" "${SERVICE_ARGS[@]}" run --rm --remove-orphans main "$@"
   local exit_code=$?
 
   # Only down if no other 'main' containers for this profile are running.
