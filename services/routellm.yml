@@ -27,7 +27,8 @@ services:
     volumes:
       - profile_home:/home/user
     healthcheck:
-      test: ["CMD", "curl", "-sf", "http://localhost:6060/v1/models"]
+      # RouteLLM only exposes /v1/chat/completions — use TCP check instead.
+      test: ["CMD", "bash", "-c", "echo > /dev/tcp/localhost/6060"]
       interval: 3s
       timeout: 5s
       retries: 20
