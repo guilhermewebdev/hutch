@@ -1,0 +1,47 @@
+# hutch-managed
+# LiteLLM proxy service
+#
+# OpenAI-compatible proxy that routes requests across multiple providers
+# (DeepSeek, Gemini, OpenAI, etc.) without any OpenAI dependency.
+# Config lives in ~/.litellm.yaml inside the profile volume.
+#
+# To use: add SERVICES="litellm" to your profile, then:
+#   hutch build litellm
+#   hutch shell <profile>
+#   # create ~/.litellm.yaml with your model list
+
+services:
+  litellm:
+    image: "hutch-litellm:latest"
+    labels:
+      hutch.service: "litellm"
+    environment:
+      - HUTCH_USER
+      - HUTCH_UID
+      - HUTCH_GID
+      - HUTCH_DOCKER_GID
+      - HUTCH_WORKSPACE
+      # Pass provider keys from host if set — useful before ~/.litellm.yaml exists.
+      - DEEPSEEK_API_KEY
+      - GOOGLE_API_KEY
+      - OPENAI_API_KEY
+    volumes:
+      - profile_home:/home/user
+    healthcheck:
+      test: ["CMD", "bash", "-c", "echo > /dev/tcp/localhost/4000"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+      start_period: 15s
+
+  main:
+    environment:
+      - OPENAI_BASE_URL=http://litellm:4000/v1
+      - OPENAI_API_KEY=litellm
+    depends_on:
+      litellm:
+        condition: service_healthy
+
+volumes:
+  profile_home:
+    name: "${HUTCH_PROFILE}_home"
