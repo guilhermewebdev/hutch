@@ -501,6 +501,7 @@ _export_env() {
   export HUTCH_UID="$(id -u)"
   export HUTCH_GID="$(id -g)"
   export HUTCH_DOCKER_GID="$(getent group docker 2>/dev/null | cut -d: -f3 || echo 999)"
+  export HUTCH_MCP_DIR="$HOME/HutchMCP/$profile"
 }
 
 _check_workspace_depth() {

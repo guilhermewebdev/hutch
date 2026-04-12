@@ -1,0 +1,33 @@
+# hutch-managed
+# Markdown MCP service
+#
+# Serves files from ~/HutchMCP/<profile>/ on the host as MCP resources
+# over HTTP/SSE. AI clients connect to http://mcp-markdown:3000/sse.
+#
+# To use: add SERVICES="mcp-markdown" to your profile, then:
+#   hutch build mcp-markdown
+#   mkdir -p ~/HutchMCP/<profile>   # place .md files here
+#
+# Configure AI clients (inside the container):
+#   claude mcp add --transport sse hutch-markdown http://mcp-markdown:3000/sse
+
+services:
+  mcp-markdown:
+    image: "hutch-mcp-markdown:latest"
+    labels:
+      hutch.service: "mcp-markdown"
+    volumes:
+      - "${HUTCH_MCP_DIR}:/hutch-mcp:ro"
+    healthcheck:
+      test: ["CMD", "bash", "-c", "echo > /dev/tcp/localhost/3000"]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+  main:
+    environment:
+      - MCP_MARKDOWN_URL=http://mcp-markdown:3000/sse
+    depends_on:
+      mcp-markdown:
+        condition: service_healthy
