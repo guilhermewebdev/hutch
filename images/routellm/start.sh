@@ -9,6 +9,8 @@ if [ -f "$HOME/.api_keys" ]; then
     while IFS= read -r line || [[ -n "$line" ]]; do
         [[ "$line" =~ ^#.*$ ]] && continue # skip comments
         [[ -z "$line" ]] && continue       # skip empty lines
+        # Strip leading "export " so both "VAR=val" and "export VAR=val" work.
+        line="${line#export }"
         key="${line%%=*}"
         echo "Exporting: $key"
         export "$line" || echo "Warning: could not export '$key', skipping"
