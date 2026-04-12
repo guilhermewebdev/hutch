@@ -12,4 +12,5 @@ EXPOSE 3000
 
 # supergateway bridges the stdio MCP server to HTTP/SSE on port 3000.
 # Clients connect to http://<host>:3000/sse
-CMD ["supergateway", "--port", "3000", "--", "mcp-server-filesystem", "/hutch-mcp"]
+# Added --sse to specify the protocol as required by supergateway
+CMD ["supergateway", "--port", "3000", "--sse", "--", "mcp-server-filesystem", "/hutch-mcp"]
