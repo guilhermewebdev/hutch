@@ -11,6 +11,6 @@ RUN mkdir -p /hutch-mcp
 EXPOSE 3000
 
 # supergateway bridges the stdio MCP server to HTTP/SSE on port 3000.
-# Clients connect to http://<host>:3000/sse
-# Added --sse to specify the protocol as required by supergateway
-CMD ["supergateway", "--port", "3000", "--sse", "--", "mcp-server-filesystem", "/hutch-mcp"]
+# The command to run the MCP server must be passed as a string to --stdio.
+# Default output transport is SSE when --stdio is used.
+CMD ["supergateway", "--port", "3000", "--stdio", "mcp-server-filesystem /hutch-mcp"]
