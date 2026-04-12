@@ -53,10 +53,10 @@ Examples:
   hutch work                             run claude in the current directory using the work profile
   hutch work login                       authenticate in the work profile
   hutch shell personal                   interactive shell in the personal profile
-  hutch service up routellm aider        start the routellm sidecar for the aider profile
+  hutch service up litellm personal      start the litellm proxy for the personal profile
   hutch service list                     list all running services
   hutch edit profile work                edit the work profile file
-  hutch edit service routellm            edit the routellm service file
+  hutch edit service litellm             edit the litellm service file
   hutch edit base default                edit the default base
   hutch edit image claude                edit the claude Dockerfile
   hutch config editor nano               set nano as the preferred editor

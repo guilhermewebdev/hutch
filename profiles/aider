@@ -1,6 +1,6 @@
 # hutch-managed
 BUILD="aider"
 BASE="default"
-SERVICES="routellm"
-COMMAND="aider --model openai/router-mf-0.11593"
-DESCRIPTION="Aider – DeepSeek Coder via RouteLLM"
+SERVICES="litellm litellm-cache"
+COMMAND="aider --model openai/strong"
+DESCRIPTION="Aider – DeepSeek via LiteLLM"

@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "hutch-files": {
+      "url": "http://mcp-files:3000/sse",
+      "type": "sse"
+    },
+    "mcp-files": {
+      "url": "http://mcp-files:3000/sse",
+      "type": "sse"
+    }
+  }
+}

@@ -160,11 +160,10 @@ hutch my-profile
 |---|---|---|
 | `claude` | `debian:bookworm` | Claude Code CLI (`@anthropic-ai/claude-code`) |
 | `gemini` | `debian:bookworm` | Google Gemini CLI (`@google/gemini-cli`) |
-| `aider` | `debian:bookworm` | Aider – DeepSeek Coder via RouteLLM (`aider-chat`) |
+| `aider` | `debian:bookworm` | Aider – AI pair programming tool (`aider-chat`) |
 | `goose` | `debian:bookworm` | Goose – Agentic AI coding assistant (`goose session`) |
 | `openhands` | `debian:bookworm` | OpenHands – Open-source AI software engineer (`openhands`) |
 | `all` | `debian:bookworm` | All AI clients in one image — `claude`, `gemini`, `aider`, `goose`, `openhands` |
-| `routellm` | `debian:bookworm` | RouteLLM server — OpenAI-compatible router (strong/weak models) |
 | `ubuntu` | `ubuntu:24.04` | General-purpose shell — no AI, just a clean workspace |
 
 The `ubuntu` profile opens bash directly, so `hutch ubuntu` drops you into an isolated shell with the current directory mounted. Useful for running arbitrary tools without touching your host environment.
@@ -174,35 +173,7 @@ hutch build ubuntu
 hutch ubuntu          # isolated bash shell in the current directory
 ```
 
-The `aider` profile uses the `routellm` base, which starts a RouteLLM sidecar as a local OpenAI-compatible router before launching the tool. Build both images first:
-
-```bash
-hutch build routellm
-hutch build aider
-```
-
-All configuration — API keys and RouteLLM settings — lives in `~/.api_keys` inside the profile's home volume. The sidecar sources this file at startup, so credentials never pass through the host environment or the compose file.
-
-Create the file on the first run:
-
-```bash
-hutch shell aider
-
-# inside the container:
-cat > ~/.api_keys <<EOF
-DEEPSEEK_API_KEY=sk-...
-
-# RouteLLM routing config (optional — these are the defaults)
-ROUTELLM_STRONG_MODEL=deepseek/deepseek-chat
-ROUTELLM_WEAK_MODEL=deepseek/deepseek-coder
-ROUTELLM_ROUTER=mf
-ROUTELLM_PORT=6060
-EOF
-```
-
-On subsequent runs `hutch aider` will pick up the keys automatically. The same volume is shared between the tool container and the routellm sidecar, so a single `~/.api_keys` file configures both.
-
-## AI Client Integration
+### AI Client Integration
 
 Hutch provides first-class support for connecting AI clients to local proxies and context servers.
 
@@ -238,7 +209,6 @@ The `mcp-files` service serves host files from `~/HutchMCP/<profile>/` over the 
 | `default` | None | AI agents and tools that don't need Docker |
 | `docker` | Host socket (opt-in) | Running `docker`/`docker compose` from inside the container |
 | `dind` | Isolated daemon | Full Docker isolation — no host socket exposed |
-| `routellm` | None | Adds a RouteLLM sidecar — routes requests between strong/weak models |
 
 By default all profiles use `default` (no Docker access). To enable Docker CLI access, set `BASE="docker"` in your profile:
 
