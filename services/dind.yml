@@ -1,0 +1,39 @@
+# Docker-in-Docker service
+#
+# Runs an isolated Docker daemon inside the profile — full Docker access
+# without sharing the host socket.
+#
+# To use: add SERVICES="dind" to your profile.
+
+services:
+  dind:
+    image: docker:dind
+    labels:
+      hutch.service: "dind"
+    privileged: true
+    environment:
+      - DOCKER_TLS_CERTDIR=/certs
+    volumes:
+      - dind_certs:/certs
+    healthcheck:
+      test: ["CMD", "docker", "info"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  main:
+    environment:
+      - DOCKER_HOST=tcp://dind:2376
+      - DOCKER_TLS_VERIFY=1
+      - DOCKER_CERT_PATH=/certs/client
+    volumes:
+      - dind_certs:/certs/client:ro
+    depends_on:
+      dind:
+        condition: service_healthy
+
+volumes:
+  profile_home:
+    name: "${HUTCH_PROFILE}_home"
+  dind_certs:
+    name: "${HUTCH_PROFILE}_dind_certs"

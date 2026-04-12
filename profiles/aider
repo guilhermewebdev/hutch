@@ -1,4 +1,5 @@
 BUILD="aider"
-BASE="routellm"
+BASE="default"
+SERVICES="routellm"
 COMMAND="aider --model openai/router-mf-0.11593"
 DESCRIPTION="Aider – DeepSeek Coder via RouteLLM"

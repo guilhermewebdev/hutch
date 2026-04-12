@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # Hutch — isolated CLI environments via Docker Compose.
 #
-# Three layers:
+# Four layers:
 #   Image   — images/<name>/Dockerfile       (installed software)
 #   Base    — bases/<name>.yml               (runtime definitions)
-#   Profile — ~/.config/hutch/<name>         (BASE + COMMAND + DESCRIPTION)
+#   Service — services/<name>.yml            (auxiliary sidecar processes)
+#   Profile — ~/.config/hutch/<name>         (BASE + SERVICES + COMMAND)
 #
 # The workspace is always the current directory ($PWD).
 # Profile state persists in the Docker volume <profile>_home.
@@ -13,6 +14,7 @@ set -euo pipefail
 SCRIPT_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
 IMAGES_DIR="$SCRIPT_DIR/images"
 BASES_DIR="$SCRIPT_DIR/bases"
+SERVICES_DIR="$SCRIPT_DIR/services"
 PROFILES_DIR="$HOME/.config/hutch"
 CONFIG_FILE="$PROFILES_DIR/.config"
 
@@ -21,37 +23,46 @@ _usage() {
 usage:
   hutch [--yes|-y] <profile> [args...]   run the profile's default command in the current directory
   hutch [--yes|-y] shell <profile>       open an interactive shell in the profile
-  hutch exec <profile> [command]     exec into a running container of the profile (default: bash)
+  hutch exec <profile> [command]         exec into a running container of the profile (default: bash)
 
-  hutch list [bases|images]          list profiles, available bases, or built images
-  hutch build <image>                build the image (e.g. hutch build claude)
-  hutch rebuild <image>              force rebuild the image (no cache)
+  hutch service up <service> <profile>   start a service for a profile
+  hutch service down <service> <profile> stop a service for a profile
+  hutch service list [<profile>]         list running services
 
-  hutch new profile <name>           create a new profile and open it in the editor
-  hutch new base <name>              create a new base and open it in the editor
-  hutch new image <name>             create a new Dockerfile and open it in the editor
+  hutch list [bases|services|images]     list profiles, bases, services, or built images
+  hutch build <image>                    build the image (e.g. hutch build claude)
+  hutch rebuild <image>                  force rebuild the image (no cache)
 
-  hutch edit image|base|profile <name>   open an existing file in the editor
+  hutch new profile <name>               create a new profile and open it in the editor
+  hutch new base <name>                  create a new base and open it in the editor
+  hutch new service <name>               create a new service and open it in the editor
+  hutch new image <name>                 create a new Dockerfile and open it in the editor
 
-  hutch config editor [value]        get or set the preferred editor
-  hutch config                       show all configuration
+  hutch edit image|base|service|profile <name>   open an existing file in the editor
 
-  hutch down <profile>               stop all containers for the profile (keeps volumes)
-  hutch purge <profile>              delete the profile volume/state (keeps the profile file)
+  hutch config editor [value]            get or set the preferred editor
+  hutch config                           show all configuration
 
-  hutch update                       update hutch to the latest version (preserves user files)
-  hutch update --force               update and overwrite local modifications to hutch files
+  hutch down <profile>                   stop all containers for the profile (keeps volumes)
+  hutch purge <profile>                  delete the profile volume/state (keeps the profile file)
+
+  hutch update                           update hutch to the latest version (preserves user files)
+  hutch update --force                   update and overwrite local modifications to hutch files
 
 Examples:
-  hutch work                         run claude in the current directory using the work profile
-  hutch work login                   authenticate in the work profile
-  hutch shell personal               interactive shell in the personal profile
-  hutch edit profile work            edit the work profile file
-  hutch edit base claude             edit the claude base
-  hutch edit image claude            edit the claude Dockerfile
-  hutch config editor nano           set nano as the preferred editor
-  hutch build claude                 build hutch-claude:latest
-  hutch list bases                   list bases and image status
+  hutch work                             run claude in the current directory using the work profile
+  hutch work login                       authenticate in the work profile
+  hutch shell personal                   interactive shell in the personal profile
+  hutch service up routellm aider        start the routellm sidecar for the aider profile
+  hutch service list                     list all running services
+  hutch edit profile work                edit the work profile file
+  hutch edit service routellm            edit the routellm service file
+  hutch edit base default                edit the default base
+  hutch edit image claude                edit the claude Dockerfile
+  hutch config editor nano               set nano as the preferred editor
+  hutch build claude                     build hutch-claude:latest
+  hutch list services                    list available services
+  hutch list bases                       list bases and image status
 EOF
 }
 
@@ -80,7 +91,6 @@ _config_set() {
   touch "$CONFIG_FILE"
   case "$key" in
     editor)
-      # Update or append
       if grep -q "^HUTCH_EDITOR=" "$CONFIG_FILE" 2>/dev/null; then
         sed -i "s|^HUTCH_EDITOR=.*|HUTCH_EDITOR=\"$value\"|" "$CONFIG_FILE"
       else
@@ -108,7 +118,6 @@ _config_show() {
 _open_editor() {
   local file="$1"
   _load_config
-  # Priority: $VISUAL > $EDITOR > hutch config > auto-detect
   local editor="${VISUAL:-${EDITOR:-${HUTCH_EDITOR:-}}}"
   if [ -z "$editor" ]; then
     for e in sensible-editor nano vim vi; do
@@ -136,10 +145,9 @@ _load_profile() {
     _list_profiles >&2
     exit 1
   fi
-  BUILD="" BASE="" COMMAND="" DESCRIPTION=""
+  BUILD="" BASE="" COMMAND="" DESCRIPTION="" SERVICES=""
   # shellcheck source=/dev/null
   source "$config"
-  # BASE defaults to "default" when not explicitly set
   BASE="${BASE:-default}"
 }
 
@@ -151,15 +159,16 @@ _list_profiles() {
     [ -f "$config" ] || continue
     local name
     name="$(basename "$config")"
-    BUILD="" BASE="" COMMAND="" DESCRIPTION=""
+    BUILD="" BASE="" COMMAND="" DESCRIPTION="" SERVICES=""
     # shellcheck source=/dev/null
     source "$config"
     BASE="${BASE:-default}"
-    local base_display vol_status
+    local base_display vol_status svc_display
     base_display="$BASE${BUILD:+ (build: $BUILD)}"
     vol_status="$(docker volume inspect "${name}_home" &>/dev/null && echo "volume: exists" || echo "volume: new")"
+    svc_display="${SERVICES:+ | svc: $SERVICES}"
     printf "  %-15s  %s\n" "$name" "$DESCRIPTION"
-    printf "  %-15s  base: %-20s | cmd: %-10s | %s\n" "" "$base_display" "$COMMAND" "$vol_status"
+    printf "  %-15s  base: %-20s | cmd: %-15s%s| %s\n" "" "$base_display" "$COMMAND" "$svc_display" "$vol_status"
     echo ""
     found=1
   done
@@ -171,7 +180,7 @@ _list_profiles() {
 _edit() {
   local type="${1:-}" name="${2:-}"
   if [ -z "$type" ] || [ -z "$name" ]; then
-    echo "usage: hutch edit image|base|profile <name>" >&2
+    echo "usage: hutch edit image|base|service|profile <name>" >&2
     exit 1
   fi
   local file
@@ -184,12 +193,16 @@ _edit() {
       file="$BASES_DIR/$name.yml"
       [ -f "$file" ] || { echo "Base '$name' not found: $file" >&2; exit 1; }
       ;;
+    service)
+      file="$SERVICES_DIR/$name.yml"
+      [ -f "$file" ] || { echo "Service '$name' not found: $file" >&2; exit 1; }
+      ;;
     profile)
       file="$PROFILES_DIR/$name"
       [ -f "$file" ] || { echo "Profile '$name' not found: $file" >&2; exit 1; }
       ;;
     *)
-      echo "usage: hutch edit image|base|profile <name>" >&2
+      echo "usage: hutch edit image|base|service|profile <name>" >&2
       exit 1
       ;;
   esac
@@ -215,25 +228,6 @@ _list_bases() {
     printf "    %s\n" "$f"
     echo ""
   done
-}
-
-_new_profile() {
-  local name="${1:?usage: hutch new profile <name>}"
-  local dest="$PROFILES_DIR/$name"
-  mkdir -p "$PROFILES_DIR"
-  if [ -f "$dest" ]; then
-    echo "Profile '$name' already exists: $dest"
-    _open_editor "$dest"
-    return
-  fi
-  cat > "$dest" <<EOF
-BUILD=""
-BASE="default"
-COMMAND=""
-DESCRIPTION=""
-EOF
-  echo "Profile created: $dest"
-  _open_editor "$dest"
 }
 
 _new_base() {
@@ -274,6 +268,129 @@ volumes:
 EOF
   echo "Base created: $dest"
   _open_editor "$dest"
+}
+
+# --- Services ---
+
+_service_file() { echo "$SERVICES_DIR/$1.yml"; }
+
+_list_services() {
+  echo "Services in $SERVICES_DIR:"
+  echo ""
+  if [ -z "$(ls -A "$SERVICES_DIR" 2>/dev/null)" ]; then
+    echo "  (no services)"
+    return
+  fi
+  for f in "$SERVICES_DIR"/*.yml; do
+    [ -f "$f" ] || continue
+    local name
+    name="$(basename "$f" .yml)"
+    printf "  %s\n" "$name"
+    printf "    %s\n" "$f"
+    echo ""
+  done
+}
+
+_new_service() {
+  local name="${1:?usage: hutch new service <name>}"
+  local dest="$SERVICES_DIR/$name.yml"
+  mkdir -p "$SERVICES_DIR"
+  if [ -f "$dest" ]; then
+    echo "Service '$name' already exists: $dest"
+    _open_editor "$dest"
+    return
+  fi
+  cat > "$dest" <<EOF
+# $name service
+#
+# To use: add SERVICES="$name" to your profile.
+
+services:
+  $name:
+    image: "TODO"
+    labels:
+      hutch.service: "$name"
+    healthcheck:
+      test: ["CMD", "true"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  main:                          # merged with the base's main service
+    environment:
+      - TODO=http://${name}:PORT
+    depends_on:
+      $name:
+        condition: service_healthy
+
+volumes:
+  profile_home:
+    name: "\${HUTCH_PROFILE}_home"
+EOF
+  echo "Service created: $dest"
+  _open_editor "$dest"
+}
+
+_build_service_args() {
+  # Populates SERVICE_ARGS array from the SERVICES variable set by _load_profile.
+  SERVICE_ARGS=()
+  for svc in ${SERVICES:-}; do
+    local f
+    f="$(_service_file "$svc")"
+    if [ ! -f "$f" ]; then
+      echo "Service '$svc' not found: $f" >&2
+      exit 1
+    fi
+    SERVICE_ARGS+=("-f" "$f")
+  done
+}
+
+_service_up() {
+  local service="${1:?usage: hutch service up <service> <profile>}"
+  local profile="${2:?usage: hutch service up <service> <profile>}"
+  local svc_file
+  svc_file="$(_service_file "$service")"
+  [ -f "$svc_file" ] || { echo "Service '$service' not found: $svc_file" >&2; exit 1; }
+  _load_profile "$profile"
+  _export_env "$profile"
+  docker compose -p "$profile" -f "$(_base_file "$BASE")" -f "$svc_file" up -d "$service"
+}
+
+_service_down() {
+  local service="${1:?usage: hutch service down <service> <profile>}"
+  local profile="${2:?usage: hutch service down <service> <profile>}"
+  local svc_file
+  svc_file="$(_service_file "$service")"
+  [ -f "$svc_file" ] || { echo "Service '$service' not found: $svc_file" >&2; exit 1; }
+  _load_profile "$profile"
+  _export_env "$profile"
+  docker compose -p "$profile" -f "$(_base_file "$BASE")" -f "$svc_file" stop "$service"
+}
+
+_service_list() {
+  local profile="${1:-}"
+  if [ -n "$profile" ]; then
+    echo "Running services for profile '$profile':"
+  else
+    echo "Running hutch services:"
+  fi
+  echo ""
+  local filter_args=()
+  [ -n "$profile" ] && filter_args+=("--filter" "label=com.docker.compose.project=$profile")
+  local output
+  output="$(docker ps \
+    "${filter_args[@]}" \
+    --filter "label=hutch.service" \
+    --format "{{.Label \"com.docker.compose.project\"}}\t{{.Label \"hutch.service\"}}\t{{.Status}}" \
+    2>/dev/null || true)"
+  if [ -z "$output" ]; then
+    echo "  (none)"
+  else
+    printf "  %-20s  %-15s  %s\n" "PROFILE" "SERVICE" "STATUS"
+    while IFS=$'\t' read -r proj svc status; do
+      printf "  %-20s  %-15s  %s\n" "$proj" "$svc" "$status"
+    done <<< "$output"
+  fi
 }
 
 # --- Images ---
@@ -334,6 +451,28 @@ _build_image() {
   docker compose -f "$base_file" build $no_cache
 }
 
+# --- Profile scaffold ---
+
+_new_profile() {
+  local name="${1:?usage: hutch new profile <name>}"
+  local dest="$PROFILES_DIR/$name"
+  mkdir -p "$PROFILES_DIR"
+  if [ -f "$dest" ]; then
+    echo "Profile '$name' already exists: $dest"
+    _open_editor "$dest"
+    return
+  fi
+  cat > "$dest" <<EOF
+BUILD=""
+BASE="default"
+SERVICES=""
+COMMAND=""
+DESCRIPTION=""
+EOF
+  echo "Profile created: $dest"
+  _open_editor "$dest"
+}
+
 # --- Runtime ---
 
 _export_env() {
@@ -382,10 +521,10 @@ _run() {
   shift 2
   _check_workspace_depth
   _export_env "$profile"
-  docker compose -p "$profile" -f "$base_file" run --rm main "$@"
+  _build_service_args
+  docker compose -p "$profile" -f "$base_file" "${SERVICE_ARGS[@]}" run --rm main "$@"
   local exit_code=$?
-  # Stop any lingering sidecar services (e.g. routellm, dind) without removing volumes
-  docker compose -p "$profile" -f "$base_file" down --remove-orphans --timeout 5 2>/dev/null || true
+  docker compose -p "$profile" -f "$base_file" "${SERVICE_ARGS[@]}" down --remove-orphans --timeout 5 2>/dev/null || true
   return $exit_code
 }
 
@@ -393,7 +532,8 @@ _down_profile() {
   local profile="$1"
   _load_profile "$profile"
   _export_env "$profile"
-  docker compose -p "$profile" -f "$(_base_file "$BASE")" down --remove-orphans --timeout 5
+  _build_service_args
+  docker compose -p "$profile" -f "$(_base_file "$BASE")" "${SERVICE_ARGS[@]}" down --remove-orphans --timeout 5
 }
 
 _exec_profile() {
@@ -444,7 +584,6 @@ _update() {
   git log --oneline HEAD..origin/main
   echo ""
 
-  # Check for local modifications to tracked files
   local modified
   modified="$(git status --porcelain | grep -v '^??' || true)"
 
@@ -465,9 +604,6 @@ _update() {
   fi
 
   git pull --ff-only origin main
-
-  # Re-run install to update symlink and add new default profiles
-  # (existing user profiles in ~/.config/hutch/ are never overwritten)
   "$SCRIPT_DIR/install.sh"
 }
 
@@ -484,9 +620,10 @@ cmd="${1:-}"
 case "$cmd" in
   list)
     case "${2:-}" in
-      bases)  _list_bases ;;
-      images) _list_images ;;
-      *)      _list_profiles ;;
+      bases)    _list_bases ;;
+      services) _list_services ;;
+      images)   _list_images ;;
+      *)        _list_profiles ;;
     esac
     ;;
 
@@ -494,8 +631,9 @@ case "$cmd" in
     case "${2:-}" in
       profile) _new_profile "${3:-}" ;;
       base)    _new_base "${3:-}" ;;
+      service) _new_service "${3:-}" ;;
       image)   _new_image "${3:-}" ;;
-      *) echo "usage: hutch new profile|base|image <name>" >&2; exit 1 ;;
+      *) echo "usage: hutch new profile|base|service|image <name>" >&2; exit 1 ;;
     esac
     ;;
 
@@ -534,6 +672,15 @@ case "$cmd" in
   exec)
     profile="${2:?usage: hutch exec <profile> [command]}"
     _exec_profile "$profile" "${@:3}"
+    ;;
+
+  service)
+    case "${2:-}" in
+      up)   _service_up   "${3:-}" "${4:-}" ;;
+      down) _service_down "${3:-}" "${4:-}" ;;
+      list) _service_list "${3:-}" ;;
+      *) echo "usage: hutch service up|down|list [args...]" >&2; exit 1 ;;
+    esac
     ;;
 
   update)

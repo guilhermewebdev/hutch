@@ -1,0 +1,45 @@
+# RouteLLM service
+#
+# OpenAI-compatible router between strong/weak models.
+# Reads API keys from ~/.api_keys inside the profile volume.
+#
+# To use: add SERVICES="routellm" to your profile.
+# First-time setup: export DEEPSEEK_API_KEY=sk-... before running,
+# then create ~/.api_keys inside the container for subsequent runs.
+
+services:
+  routellm:
+    image: "hutch-routellm:latest"
+    labels:
+      hutch.service: "routellm"
+    environment:
+      - HUTCH_USER
+      - HUTCH_UID
+      - HUTCH_GID
+      - HUTCH_DOCKER_GID
+      - HUTCH_WORKSPACE
+      # Placeholder ensures OPENAI_API_KEY is set at module import time.
+      # start.sh replaces it with the real key from ~/.api_keys at runtime.
+      - OPENAI_API_KEY=routellm-placeholder
+      # Pass-through from host — useful for first-time setup before ~/.api_keys exists.
+      - DEEPSEEK_API_KEY
+    volumes:
+      - profile_home:/home/user
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:6060/v1/models"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  main:
+    environment:
+      - OPENAI_BASE_URL=http://routellm:6060/v1
+      - OPENAI_API_KEY=routellm
+    depends_on:
+      routellm:
+        condition: service_healthy
+
+volumes:
+  profile_home:
+    name: "${HUTCH_PROFILE}_home"
